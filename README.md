@@ -26,36 +26,78 @@ Power Automate and Copilot Studio are enterprise products. If you cannot access 
 
 This backend is designed so the workflow layer can later be connected to Power Automate through HTTP webhooks.
 
+## Features
+
+- Analyze a CV against a job description.
+- Extract matched, missing, and extra candidate skills.
+- Calculate a deterministic match score.
+- Infer job seniority signals such as junior, mid, or senior.
+- Generate practical recommendations.
+- Draft a cover letter template.
+- Plan workflow automation actions such as status updates, email drafts, learning plans, and manual review.
+- Persist analysis results in SQLite.
+- List previous application analyses.
+- Retrieve a stored analysis by id.
+
 ## Tech stack
 
-- Python
+- Python 3.11
 - FastAPI
 - Pydantic
+- SQLite
 - Pytest
 - Uvicorn
+- Ruff
 
 ## Run locally
 
 ```bash
 uv sync
-uv run uvicorn app.main:app --reload
+.venv/bin/uvicorn app.main:app --host 127.0.0.1 --port 8001
 ```
 
 Open:
 
-- API: http://127.0.0.1:8000
-- Docs: http://127.0.0.1:8000/docs
+- API: http://127.0.0.1:8001
+- Docs: http://127.0.0.1:8001/docs
 
 ## Run tests
 
 ```bash
-uv run pytest
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/pytest
+.venv/bin/ruff check .
 ```
+
+## Configuration
+
+By default, the app stores SQLite data at:
+
+```text
+data/applications.db
+```
+
+You can override the database path with:
+
+```bash
+DATABASE_PATH=/tmp/test_applications.db .venv/bin/pytest
+```
+
+Tests use a temporary database path so local development data is not polluted by test runs.
+
+## API endpoints
+
+| Method | Path | Description |
+| --- | --- | --- |
+| GET | `/health` | Health check |
+| GET | `/skills` | List known skills |
+| POST | `/applications/analyze` | Analyze and store a job application |
+| GET | `/applications` | List stored application analyses |
+| GET | `/applications/{application_id}` | Retrieve one stored analysis |
 
 ## First API example
 
 ```bash
-curl -X POST http://127.0.0.1:8000/applications/analyze \
+curl -X POST http://127.0.0.1:8001/applications/analyze \
   -H "Content-Type: application/json" \
   -d '{
     "candidate_name": "Ada Lovelace",
@@ -66,25 +108,31 @@ curl -X POST http://127.0.0.1:8000/applications/analyze \
   }'
 ```
 
-## Learning roadmap
+## Roadmap
 
-### Sprint 1
+### V1 - Deterministic Agent
 
-Build the deterministic backend agent and understand every step.
+- CV and job description analysis
+- Skill extraction
+- Match scoring
+- Recommendations
+- Cover letter drafting
+- Workflow action planning
 
-### Sprint 2
+### V2 - Persistence and Tracking
 
-Persist analyses in PostgreSQL and add job application tracking.
+- SQLite database support
+- Repository layer
+- Stored application analyses
+- Application list endpoint
+- Application detail endpoint
+- Test database isolation
 
-### Sprint 3
+### Future Improvements
 
-Add a workflow adapter with webhooks for n8n first.
-
-### Sprint 4
-
-Add an LLM provider interface and use it for better cover letters and reasoning.
-
-### Sprint 5
-
-Add RAG over CV/project documents and prepare the portfolio README.
-
+- PostgreSQL and Docker Compose
+- n8n webhook integration
+- OpenAI or local LLM provider
+- RAG over CV and portfolio documents
+- GitHub Actions CI
+- Authentication
