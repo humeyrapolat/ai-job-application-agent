@@ -86,13 +86,13 @@ Tests use a temporary database path so local development data is not polluted by
 
 ## API endpoints
 
-| Method | Path | Description |
-| --- | --- | --- |
-| GET | `/health` | Health check |
-| GET | `/skills` | List known skills |
-| POST | `/applications/analyze` | Analyze and store a job application |
-| GET | `/applications` | List stored application analyses |
-| GET | `/applications/{application_id}` | Retrieve one stored analysis |
+| Method | Path                             | Description                         |
+| ------ | -------------------------------- | ----------------------------------- |
+| GET    | `/health`                        | Health check                        |
+| GET    | `/skills`                        | List known skills                   |
+| POST   | `/applications/analyze`          | Analyze and store a job application |
+| GET    | `/applications`                  | List stored application analyses    |
+| GET    | `/applications/{application_id}` | Retrieve one stored analysis        |
 
 ## First API example
 

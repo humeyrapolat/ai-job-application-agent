@@ -1,9 +1,11 @@
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
-from app.main import app
-from pathlib import Path
 from app.core.database import initialize_database
+from app.main import app
+
 
 @pytest.fixture
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
@@ -18,6 +20,7 @@ def test_health_endpoint(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok"}
+
 
 def test_analyze_application_endpoint(client: TestClient) -> None:
     response = client.post(
@@ -37,6 +40,7 @@ def test_analyze_application_endpoint(client: TestClient) -> None:
     assert body["candidate_name"] == "Ada Lovelace"
     assert body["match_score"] >= 70
     assert "python" in body["matched_skills"]
+
 
 def test_list_applications_endpoint(client: TestClient) -> None:
     create_response = client.post(
