@@ -1,12 +1,12 @@
-import sqlite3
 import os
+import sqlite3
 from pathlib import Path
 
 DEFAULT_DATABASE_PATH = Path("data") / "applications.db"
 
 
 def get_database_path() -> Path:
-    return Path( os.getenv("DATABASE_PATH", DEFAULT_DATABASE_PATH) )
+    return Path(os.getenv("DATABASE_PATH", DEFAULT_DATABASE_PATH))
 
 
 def get_connection() -> sqlite3.Connection:
@@ -15,7 +15,7 @@ def get_connection() -> sqlite3.Connection:
     connection = sqlite3.connect(database_path)
     connection.row_factory = sqlite3.Row
     return connection
-  
+
 
 def initialize_database() -> None:
     with get_connection() as connection:
