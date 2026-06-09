@@ -48,6 +48,8 @@ This backend is designed so the workflow layer can later be connected to Power A
 - Pytest
 - Uvicorn
 - Ruff
+- Docker
+- GitHub Actions
 
 ## Run locally
 
@@ -64,9 +66,39 @@ Open:
 ## Run tests
 
 ```bash
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/pytest
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest
 .venv/bin/ruff check .
 ```
+
+## Run with Docker
+
+Make sure Docker Desktop is running before building the image.
+
+Build the image:
+
+```bash
+docker build -t ai-job-application-agent .
+```
+
+Run the API:
+
+```bash
+docker run --rm -p 8000:8000 ai-job-application-agent
+```
+
+Open:
+
+- API: http://127.0.0.1:8000
+- Docs: http://127.0.0.1:8000/docs
+
+## Continuous Integration
+
+GitHub Actions runs on every push and pull request:
+
+- dependency installation with `uv sync --frozen`
+- linting with `ruff`
+- API and agent tests with `python -m pytest`
+- Docker image build verification
 
 ## Configuration
 
@@ -79,7 +111,7 @@ data/applications.db
 You can override the database path with:
 
 ```bash
-DATABASE_PATH=/tmp/test_applications.db .venv/bin/pytest
+DATABASE_PATH=/tmp/test_applications.db PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest
 ```
 
 Tests use a temporary database path so local development data is not polluted by test runs.
@@ -128,11 +160,16 @@ curl -X POST http://127.0.0.1:8001/applications/analyze \
 - Application detail endpoint
 - Test database isolation
 
+### V3 - Docker and CI
+
+- Dockerfile for containerized API runs
+- `.dockerignore` for smaller and safer build context
+- GitHub Actions workflow for lint, tests, and Docker build checks
+
 ### Future Improvements
 
 - PostgreSQL and Docker Compose
 - n8n webhook integration
 - OpenAI or local LLM provider
 - RAG over CV and portfolio documents
-- GitHub Actions CI
 - Authentication
