@@ -4,7 +4,6 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.core.database import initialize_database
-from app.main import app
 
 
 @pytest.fixture
@@ -12,6 +11,9 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     test_database_path = tmp_path / "test_applications.db"
     monkeypatch.setenv("DATABASE_PATH", str(test_database_path))
     initialize_database()
+
+    from app.main import app
+
     return TestClient(app)
 
 

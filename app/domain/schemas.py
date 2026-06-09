@@ -18,7 +18,7 @@ class WorkflowAction(BaseModel):
     payload: dict[str, str] = Field(default_factory=dict)
 
 
-class  AnalyzeApplicationResponse(BaseModel):
+class AnalyzeApplicationResponse(BaseModel):
     candidate_name: str
     job_title: str
     company_name: str

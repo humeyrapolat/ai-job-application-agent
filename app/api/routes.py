@@ -1,3 +1,5 @@
+from typing import Any
+
 from fastapi import APIRouter, HTTPException
 
 from app.core.database import initialize_database
@@ -36,13 +38,14 @@ def analyze_application(payload: AnalyzeApplicationRequest) -> StoredAnalyzeAppl
         **analysis.dict(),
     )
 
+
 @router.get("/applications", response_model=list[ApplicationSummary])
 def list_applications() -> list[ApplicationSummary]:
     return [ApplicationSummary(**item) for item in repository.list_analyses()]
 
 
 @router.get("/applications/{application_id}")
-def get_application(application_id: int) -> dict:
+def get_application(application_id: int) -> dict[str, Any]:
     application = repository.get_analysis(application_id)
     if application is None:
         raise HTTPException(status_code=404, detail="Application analysis not found")
