@@ -42,6 +42,11 @@ def test_analyze_application_endpoint(client: TestClient) -> None:
     assert body["candidate_name"] == "Ada Lovelace"
     assert body["match_score"] >= 70
     assert "python" in body["matched_skills"]
+    assert body["cv_recommendations"]
+    assert body["ai_recommendation_status"] == "not_requested"
+    assert {"category", "priority", "title", "explanation", "suggested_change"}.issubset(
+        body["cv_recommendations"][0]
+    )
 
 
 def test_list_applications_endpoint(client: TestClient) -> None:

@@ -33,6 +33,8 @@ This backend is designed so the workflow layer can later be connected to Power A
 - Calculate a deterministic match score.
 - Infer job seniority signals such as junior, mid, or senior.
 - Generate practical recommendations.
+- Generate structured CV improvement recommendations.
+- Optionally call an LLM for AI-generated CV recommendations.
 - Draft a cover letter template.
 - Plan workflow automation actions such as status updates, email drafts, learning plans, and manual review.
 - Persist analysis results in SQLite.

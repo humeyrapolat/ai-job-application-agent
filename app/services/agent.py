@@ -1,11 +1,17 @@
 from app.domain.schemas import AnalyzeApplicationRequest, AnalyzeApplicationResponse
+from app.services.recommendations import CVRecommendationEngine
 from app.services.skills import extract_skills
 from app.services.workflow import WorkflowPlanner
 
 
 class JobApplicationAgent:
-    def __init__(self, workflow_planner: WorkflowPlanner | None = None) -> None:
+    def __init__(
+        self,
+        workflow_planner: WorkflowPlanner | None = None,
+        recommendation_engine: CVRecommendationEngine | None = None,
+    ) -> None:
         self.workflow_planner = workflow_planner or WorkflowPlanner()
+        self.recommendation_engine = recommendation_engine or CVRecommendationEngine()
 
     def analyze(self, payload: AnalyzeApplicationRequest) -> AnalyzeApplicationResponse:
         cv_skills = extract_skills(payload.cv_text)
@@ -26,6 +32,17 @@ class JobApplicationAgent:
             match_score=match_score,
             missing_skills=missing_skills,
             extra_candidate_skills=extra_candidate_skills,
+        )
+        cv_recommendation_result = self.recommendation_engine.build(
+            candidate_name=payload.candidate_name,
+            job_title=payload.job_title,
+            company_name=payload.company_name,
+            match_score=match_score,
+            matched_skills=matched_skills,
+            missing_skills=missing_skills,
+            cv_text=payload.cv_text,
+            job_description=payload.job_description,
+            use_ai=payload.use_ai_recommendations,
         )
         cover_letter_draft = self._draft_cover_letter(
             candidate_name=payload.candidate_name,
@@ -54,6 +71,8 @@ class JobApplicationAgent:
             missing_skills=missing_skills,
             extra_candidate_skills=extra_candidate_skills,
             recommendations=recommendations,
+            cv_recommendations=cv_recommendation_result.recommendations,
+            ai_recommendation_status=cv_recommendation_result.ai_status,
             cover_letter_draft=cover_letter_draft,
             workflow_actions=workflow_actions,
             explanation=self._explain(match_score, matched_skills, missing_skills),
@@ -154,4 +173,3 @@ class JobApplicationAgent:
 def _mentions_experience(text: str) -> bool:
     lowered = text.lower()
     return any(term in lowered for term in ("experience", "project", "built", "developed"))
-

@@ -9,6 +9,7 @@ class AnalyzeApplicationRequest(BaseModel):
     company_name: str = Field(..., min_length=2, examples=["Example GmbH"])
     cv_text: str = Field(..., min_length=20)
     job_description: str = Field(..., min_length=20)
+    use_ai_recommendations: bool = Field(default=False)
 
 
 class WorkflowAction(BaseModel):
@@ -16,6 +17,20 @@ class WorkflowAction(BaseModel):
     title: str
     description: str
     payload: dict[str, str] = Field(default_factory=dict)
+
+
+class CVRecommendation(BaseModel):
+    category: Literal[
+        "keyword_optimization",
+        "project_evidence",
+        "impact_framing",
+        "application_decision",
+    ]
+    priority: Literal["low", "medium", "high"]
+    title: str
+    explanation: str
+    suggested_change: str
+    example_bullet: str | None = None
 
 
 class AnalyzeApplicationResponse(BaseModel):
@@ -28,6 +43,8 @@ class AnalyzeApplicationResponse(BaseModel):
     missing_skills: list[str]
     extra_candidate_skills: list[str]
     recommendations: list[str]
+    cv_recommendations: list[CVRecommendation]
+    ai_recommendation_status: Literal["not_requested", "generated", "unavailable"]
     cover_letter_draft: str
     workflow_actions: list[WorkflowAction]
     explanation: str
