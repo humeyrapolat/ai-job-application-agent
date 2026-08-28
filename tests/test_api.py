@@ -24,6 +24,19 @@ def test_health_endpoint(client: TestClient) -> None:
     assert response.json() == {"status": "ok"}
 
 
+def test_api_accepts_frontend_cors_preflight(client: TestClient) -> None:
+    response = client.options(
+        "/applications/analyze",
+        headers={
+            "Origin": "http://127.0.0.1:5173",
+            "Access-Control-Request-Method": "POST",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+
+
 def test_analyze_application_endpoint(client: TestClient) -> None:
     response = client.post(
         "/applications/analyze",

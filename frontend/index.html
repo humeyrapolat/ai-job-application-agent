@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Job Application Agent</title>
+    <meta
+      name="description"
+      content="Analyze a CV against a job description and return structured application recommendations."
+    />
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">Candidate Fit Console</p>
+        <h1>AI Job Application Agent</h1>
+      </div>
+      <div class="api-card" aria-live="polite">
+        <span class="status-dot" id="statusDot"></span>
+        <span id="statusText">API not checked</span>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="input-panel" aria-labelledby="formTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Input</p>
+            <h2 id="formTitle">Application Details</h2>
+          </div>
+          <button class="secondary-button" type="button" id="sampleButton">Fill sample</button>
+        </div>
+
+        <form id="analysisForm">
+          <div class="field-grid">
+            <label>
+              Candidate
+              <input name="candidate_name" value="Ada Lovelace" minlength="2" required />
+            </label>
+            <label>
+              Target role
+              <input name="job_title" value="Junior AI Backend Developer" minlength="2" required />
+            </label>
+            <label>
+              Company
+              <input name="company_name" value="Example GmbH" minlength="2" required />
+            </label>
+          </div>
+
+          <div class="field-stack">
+            <label>
+              CV text
+              <textarea name="cv_text" minlength="20" required></textarea>
+            </label>
+            <label>
+              Job description
+              <textarea name="job_description" minlength="20" required></textarea>
+            </label>
+          </div>
+
+          <div class="control-row">
+            <label class="api-input">
+              API base URL
+              <input name="api_base_url" id="apiBaseUrl" />
+            </label>
+            <label class="toggle-row">
+              <input name="use_ai_recommendations" type="checkbox" />
+              <span>Use AI recommendations</span>
+            </label>
+          </div>
+
+          <div class="button-row">
+            <button class="primary-button" type="submit" id="submitButton">Analyze CV</button>
+            <button class="secondary-button" type="button" id="healthButton">Check API</button>
+          </div>
+        </form>
+      </section>
+
+      <section class="result-panel" aria-labelledby="resultTitle">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Output</p>
+            <h2 id="resultTitle">Analysis Result</h2>
+          </div>
+          <span class="result-id" id="resultId">No result</span>
+        </div>
+
+        <div class="empty-state" id="emptyState">No analysis yet.</div>
+        <div class="result-content hidden" id="resultContent">
+          <div class="score-strip">
+            <div>
+              <span class="score-label">Match score</span>
+              <strong id="scoreValue">0</strong>
+            </div>
+            <div class="meter" aria-hidden="true">
+              <span id="scoreBar"></span>
+            </div>
+            <span class="seniority-pill" id="seniorityValue">unknown</span>
+          </div>
+
+          <div class="skill-grid">
+            <article>
+              <h3>Matched skills</h3>
+              <div class="chip-list" id="matchedSkills"></div>
+            </article>
+            <article>
+              <h3>Missing skills</h3>
+              <div class="chip-list" id="missingSkills"></div>
+            </article>
+            <article>
+              <h3>Extra candidate skills</h3>
+              <div class="chip-list" id="extraSkills"></div>
+            </article>
+          </div>
+
+          <div class="status-line" id="aiStatus"></div>
+          <div class="explanation" id="explanation"></div>
+
+          <div class="result-section">
+            <h3>CV recommendations</h3>
+            <div class="recommendation-list" id="cvRecommendations"></div>
+          </div>
+
+          <div class="result-section">
+            <h3>Application guidance</h3>
+            <ul class="plain-list" id="recommendations"></ul>
+          </div>
+
+          <div class="result-section split-section">
+            <article>
+              <h3>Cover letter draft</h3>
+              <pre id="coverLetter"></pre>
+            </article>
+            <article>
+              <h3>Workflow actions</h3>
+              <div class="workflow-list" id="workflowActions"></div>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="./app.js"></script>
+  </body>
+</html>
