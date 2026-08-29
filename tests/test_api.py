@@ -64,7 +64,10 @@ def test_analyze_application_endpoint(client: TestClient) -> None:
             "candidate_name": "Ada Lovelace",
             "job_title": "Junior AI Backend Developer",
             "company_name": "Example GmbH",
-            "cv_text": "Python, FastAPI, PostgreSQL, Docker, REST APIs, Git, OpenAI API.",
+            "cv_text": (
+                "Python, FastAPI, PostgreSQL, Docker, REST APIs, Git, OpenAI API, "
+                "AI, and LLM projects."
+            ),
             "job_description": "Looking for Python, FastAPI, PostgreSQL, Docker, Git, and LLM.",
         },
     )
@@ -75,8 +78,11 @@ def test_analyze_application_endpoint(client: TestClient) -> None:
     assert body["candidate_name"] == "Ada Lovelace"
     assert body["match_score"] >= 70
     assert "python" in body["matched_skills"]
+    assert body["requirement_analysis"]["must_have_skills"]
+    assert body["score_breakdown"]["confidence"] in {"medium", "high"}
     assert body["cv_recommendations"]
     assert body["ai_recommendation_status"] == "not_requested"
+    assert body["cover_letter_status"] == "deterministic"
     assert {"category", "priority", "title", "explanation", "suggested_change"}.issubset(
         body["cv_recommendations"][0]
     )

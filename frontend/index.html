@@ -65,6 +65,7 @@
               CV text
               <textarea name="cv_text" minlength="20" required></textarea>
             </label>
+            <p class="privacy-note">Remove sensitive personal details before uploading a CV.</p>
             <label>
               Job description
               <textarea name="job_description" minlength="20" required></textarea>
@@ -78,7 +79,7 @@
             </label>
             <label class="toggle-row">
               <input name="use_ai_recommendations" type="checkbox" />
-              <span>Use AI recommendations</span>
+              <span>Use AI recommendations and cover letter</span>
             </label>
           </div>
 
@@ -127,7 +128,39 @@
           </div>
 
           <div class="status-line" id="aiStatus"></div>
+          <div class="status-line" id="coverLetterStatus"></div>
           <div class="explanation" id="explanation"></div>
+
+          <div class="result-section">
+            <h3>Requirement breakdown</h3>
+            <div class="requirement-grid">
+              <article>
+                <h4>Must-have</h4>
+                <div class="chip-list" id="mustHaveSkills"></div>
+              </article>
+              <article>
+                <h4>Nice-to-have</h4>
+                <div class="chip-list" id="niceToHaveSkills"></div>
+              </article>
+              <article>
+                <h4>Languages</h4>
+                <div class="chip-list" id="languageRequirements"></div>
+              </article>
+              <article>
+                <h4>Location</h4>
+                <div class="chip-list" id="locationRequirements"></div>
+              </article>
+              <article>
+                <h4>Degree</h4>
+                <div class="chip-list" id="degreeRequirements"></div>
+              </article>
+            </div>
+          </div>
+
+          <div class="result-section">
+            <h3>Score breakdown</h3>
+            <div class="score-breakdown" id="scoreBreakdown"></div>
+          </div>
 
           <div class="result-section">
             <h3>CV recommendations</h3>

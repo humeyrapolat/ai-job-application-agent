@@ -1,5 +1,12 @@
-from app.domain.schemas import AnalyzeApplicationRequest, AnalyzeApplicationResponse
+from app.domain.schemas import (
+    AnalyzeApplicationRequest,
+    AnalyzeApplicationResponse,
+    JobRequirementAnalysis,
+    ScoreBreakdown,
+)
+from app.services.cover_letter import CoverLetterEngine
 from app.services.recommendations import CVRecommendationEngine
+from app.services.requirements import analyze_job_requirements
 from app.services.skills import extract_skills
 from app.services.workflow import WorkflowPlanner
 
@@ -9,27 +16,33 @@ class JobApplicationAgent:
         self,
         workflow_planner: WorkflowPlanner | None = None,
         recommendation_engine: CVRecommendationEngine | None = None,
+        cover_letter_engine: CoverLetterEngine | None = None,
     ) -> None:
         self.workflow_planner = workflow_planner or WorkflowPlanner()
         self.recommendation_engine = recommendation_engine or CVRecommendationEngine()
+        self.cover_letter_engine = cover_letter_engine or CoverLetterEngine()
 
     def analyze(self, payload: AnalyzeApplicationRequest) -> AnalyzeApplicationResponse:
         cv_skills = extract_skills(payload.cv_text)
-        job_skills = extract_skills(payload.job_description)
+        job_text = f"{payload.job_title}\n{payload.job_description}"
+        job_skills = extract_skills(job_text)
+        requirement_analysis = analyze_job_requirements(
+            job_title=payload.job_title,
+            job_description=payload.job_description,
+            cv_skills=cv_skills,
+        )
 
         matched_skills = sorted(cv_skills & job_skills)
         missing_skills = sorted(job_skills - cv_skills)
         extra_candidate_skills = sorted(cv_skills - job_skills)
 
-        match_score = self._calculate_match_score(
-            job_skills=job_skills,
+        match_score, score_breakdown = self._calculate_match_score(
+            requirement_analysis=requirement_analysis,
             matched_skills=set(matched_skills),
             extra_candidate_skills=set(extra_candidate_skills),
             cv_text=payload.cv_text,
         )
-        seniority_signal = self._infer_seniority(
-            f"{payload.job_title}\n{payload.job_description}"
-        )
+        seniority_signal = requirement_analysis.seniority
         recommendations = self._build_recommendations(
             match_score=match_score,
             missing_skills=missing_skills,
@@ -46,7 +59,7 @@ class JobApplicationAgent:
             job_description=payload.job_description,
             use_ai=payload.use_ai_recommendations,
         )
-        cover_letter_draft = self._draft_cover_letter(
+        cover_letter_result = self.cover_letter_engine.build(
             candidate_name=payload.candidate_name,
             job_title=payload.job_title,
             company_name=payload.company_name,
@@ -54,6 +67,10 @@ class JobApplicationAgent:
             matched_skills=matched_skills,
             missing_skills=missing_skills,
             extra_candidate_skills=extra_candidate_skills,
+            requirement_analysis=requirement_analysis,
+            cv_text=payload.cv_text,
+            job_description=payload.job_description,
+            use_ai=payload.use_ai_recommendations,
         )
 
         workflow_actions = self.workflow_planner.plan(
@@ -62,7 +79,7 @@ class JobApplicationAgent:
             company_name=payload.company_name,
             match_score=match_score,
             missing_skills=missing_skills,
-            cover_letter_draft=cover_letter_draft,
+            cover_letter_draft=cover_letter_result.draft,
         )
 
         return AnalyzeApplicationResponse(
@@ -74,50 +91,87 @@ class JobApplicationAgent:
             matched_skills=matched_skills,
             missing_skills=missing_skills,
             extra_candidate_skills=extra_candidate_skills,
+            requirement_analysis=requirement_analysis,
+            score_breakdown=score_breakdown,
             recommendations=recommendations,
             cv_recommendations=cv_recommendation_result.recommendations,
             ai_recommendation_status=cv_recommendation_result.ai_status,
-            cover_letter_draft=cover_letter_draft,
+            cover_letter_draft=cover_letter_result.draft,
+            cover_letter_status=cover_letter_result.status,
             workflow_actions=workflow_actions,
             explanation=self._explain(
                 match_score,
-                matched_skills,
-                missing_skills,
-                detected_job_skill_count=len(job_skills),
+                requirement_analysis=requirement_analysis,
+                score_breakdown=score_breakdown,
             ),
         )
 
     @staticmethod
     def _calculate_match_score(
         *,
-        job_skills: set[str],
+        requirement_analysis: JobRequirementAnalysis,
         matched_skills: set[str],
         extra_candidate_skills: set[str],
         cv_text: str,
-    ) -> int:
-        if not job_skills:
-            return 50
+    ) -> tuple[int, ScoreBreakdown]:
+        must_have_count = len(requirement_analysis.must_have_skills)
+        nice_to_have_count = len(requirement_analysis.nice_to_have_skills)
+        detected_skill_count = must_have_count + nice_to_have_count
 
-        required_skill_score = len(matched_skills) / len(job_skills) * 85
-        extra_skill_bonus = min(len(extra_candidate_skills), 3) * 2
-        experience_bonus = 5 if _mentions_experience(cv_text) else 0
-        evidence_cap = _score_cap_for_detected_skills(job_skills)
+        if not detected_skill_count:
+            score_breakdown = ScoreBreakdown(
+                must_have_score=35,
+                nice_to_have_score=0,
+                evidence_score=5 if _mentions_experience(cv_text) else 0,
+                adjacent_skill_score=0,
+                score_cap=55,
+                confidence="low",
+            )
+            return (
+                score_breakdown.must_have_score + score_breakdown.evidence_score,
+                score_breakdown,
+            )
 
-        return min(
-            evidence_cap,
-            round(required_skill_score + extra_skill_bonus + experience_bonus),
+        must_have_score = _coverage_score(
+            matched_count=len(requirement_analysis.matched_must_have_skills),
+            total_count=must_have_count,
+            max_score=70,
         )
+        if not must_have_count and nice_to_have_count:
+            must_have_score = _coverage_score(
+                matched_count=len(requirement_analysis.matched_nice_to_have_skills),
+                total_count=nice_to_have_count,
+                max_score=55,
+            )
 
-    @staticmethod
-    def _infer_seniority(job_description: str) -> str:
-        lowered = job_description.lower()
-        if any(term in lowered for term in ("senior", "lead", "principal", "staff")):
-            return "senior"
-        if any(term in lowered for term in ("junior", "entry level", "graduate", "intern")):
-            return "junior"
-        if any(term in lowered for term in ("mid", "professional", "2+ years", "3+ years")):
-            return "mid"
-        return "unknown"
+        nice_to_have_score = (
+            _coverage_score(
+                matched_count=len(requirement_analysis.matched_nice_to_have_skills),
+                total_count=nice_to_have_count,
+                max_score=15,
+            )
+            if must_have_count
+            else 0
+        )
+        evidence_score = _evidence_score(cv_text, matched_skills)
+        adjacent_skill_score = min(len(extra_candidate_skills), 5) if matched_skills else 0
+        score_cap = _score_cap_for_requirement_analysis(requirement_analysis)
+        raw_score = (
+            must_have_score
+            + nice_to_have_score
+            + evidence_score
+            + adjacent_skill_score
+        )
+        final_score = min(score_cap, raw_score)
+
+        return final_score, ScoreBreakdown(
+            must_have_score=must_have_score,
+            nice_to_have_score=nice_to_have_score,
+            evidence_score=evidence_score,
+            adjacent_skill_score=adjacent_skill_score,
+            score_cap=score_cap,
+            confidence=_score_confidence(detected_skill_count),
+        )
 
     @staticmethod
     def _build_recommendations(
@@ -150,59 +204,24 @@ class JobApplicationAgent:
         return recommendations
 
     @staticmethod
-    def _draft_cover_letter(
-        *,
-        candidate_name: str,
-        job_title: str,
-        company_name: str,
-        match_score: int,
-        matched_skills: list[str],
-        missing_skills: list[str],
-        extra_candidate_skills: list[str],
-    ) -> str:
-        strengths = _format_human_skill_list(matched_skills[:5]) or "backend development"
-        role_focus = _build_role_focus(job_title, matched_skills, missing_skills)
-        adjacent_strengths = _format_human_skill_list(extra_candidate_skills[:4])
-        readiness_sentence = _build_readiness_sentence(
-            match_score=match_score,
-            missing_skills=missing_skills,
-        )
-        adjacent_sentence = (
-            f" I can also bring adjacent experience in {adjacent_strengths}, where relevant."
-            if adjacent_strengths
-            else ""
-        )
-
-        return (
-            f"Dear {company_name} team,\n\n"
-            f"I am applying for the {job_title} role because it aligns with my interest in "
-            f"{role_focus}.\n\n"
-            f"My recent work includes hands-on project experience with {strengths}. This "
-            "background would help me contribute to practical implementation, clear API "
-            f"workflows, and reliable delivery for {company_name}.{adjacent_sentence}\n\n"
-            f"{readiness_sentence}\n\n"
-            f"Thank you for considering my application. I would be glad to discuss how my "
-            f"backend and AI automation experience can support the {company_name} team.\n\n"
-            f"Best regards,\n{candidate_name}"
-        )
-
-    @staticmethod
     def _explain(
         match_score: int,
-        matched_skills: list[str],
-        missing_skills: list[str],
         *,
-        detected_job_skill_count: int,
+        requirement_analysis: JobRequirementAnalysis,
+        score_breakdown: ScoreBreakdown,
     ) -> str:
         explanation = (
-            f"The score is {match_score}/100 because the CV matched "
-            f"{len(matched_skills)} required skill(s) and missed {len(missing_skills)}."
+            f"The score is {match_score}/100 using weighted requirement coverage: "
+            f"{len(requirement_analysis.matched_must_have_skills)}/"
+            f"{len(requirement_analysis.must_have_skills)} must-have skill(s) and "
+            f"{len(requirement_analysis.matched_nice_to_have_skills)}/"
+            f"{len(requirement_analysis.nice_to_have_skills)} nice-to-have skill(s) matched."
         )
 
-        if detected_job_skill_count <= 2:
+        if score_breakdown.score_cap < 100:
             explanation += (
-                f" Only {detected_job_skill_count} role skill(s) were detected, so the score "
-                "is capped instead of treated as a perfect fit."
+                f" Confidence is {score_breakdown.confidence}, so the score is capped at "
+                f"{score_breakdown.score_cap} instead of treated as a perfect fit."
             )
 
         return explanation
@@ -213,89 +232,60 @@ def _mentions_experience(text: str) -> bool:
     return any(term in lowered for term in ("experience", "project", "built", "developed"))
 
 
-def _build_role_focus(
-    job_title: str,
-    matched_skills: list[str],
-    missing_skills: list[str],
-) -> str:
-    role_terms = matched_skills[:3] + missing_skills[:2]
-    if role_terms:
-        return _format_human_skill_list(role_terms)
-
-    return job_title.lower()
-
-
-def _build_readiness_sentence(*, match_score: int, missing_skills: list[str]) -> str:
-    if missing_skills:
-        missing_skill_list = _format_human_skill_list(missing_skills[:3])
-        return (
-            f"Where the role asks for {missing_skill_list}, I am actively strengthening those "
-            "areas through focused project work and would connect that learning to the role's "
-            "delivery needs."
+def _mentions_impact(text: str) -> bool:
+    lowered = text.lower()
+    return any(
+        term in lowered
+        for term in (
+            "improved",
+            "reduced",
+            "increased",
+            "automated",
+            "optimized",
+            "measured",
+            "deployed",
+            "%",
         )
-
-    if match_score >= 80:
-        return (
-            "Because the core requirements are well aligned with my current profile, I would "
-            "focus on tailoring the first project bullets to the role's priorities."
-        )
-
-    return (
-        "Although the match is not perfect, the overlap gives me a clear starting point to "
-        "contribute while continuing to deepen the role-specific skills."
     )
 
 
-def _format_human_list(items: list[str]) -> str:
-    if not items:
-        return ""
-    if len(items) == 1:
-        return items[0]
-    if len(items) == 2:
-        return f"{items[0]} and {items[1]}"
-    return f"{', '.join(items[:-1])}, and {items[-1]}"
+def _coverage_score(*, matched_count: int, total_count: int, max_score: int) -> int:
+    if total_count == 0:
+        return 0
+    return round(matched_count / total_count * max_score)
 
 
-def _format_human_skill_list(skills: list[str]) -> str:
-    return _format_human_list([_format_skill_label(skill) for skill in skills])
+def _evidence_score(cv_text: str, matched_skills: set[str]) -> int:
+    if not matched_skills:
+        return 0
+
+    score = 0
+    if _mentions_experience(cv_text):
+        score += 5
+    if _mentions_impact(cv_text):
+        score += 5
+    return score
 
 
-def _format_skill_label(skill: str) -> str:
-    display_names = {
-        "aws": "AWS",
-        "azure": "Azure",
-        "ci/cd": "CI/CD",
-        "docker": "Docker",
-        "fastapi": "FastAPI",
-        "git": "Git",
-        "graphql": "GraphQL",
-        "javascript": "JavaScript",
-        "langchain": "LangChain",
-        "langgraph": "LangGraph",
-        "llm": "LLM",
-        "mongodb": "MongoDB",
-        "mysql": "MySQL",
-        "neo4j": "Neo4j",
-        "nlp": "NLP",
-        "openai api": "OpenAI API",
-        "postgresql": "PostgreSQL",
-        "python": "Python",
-        "rag": "RAG",
-        "react": "React",
-        "redis": "Redis",
-        "rest api": "REST APIs",
-        "sqlite": "SQLite",
-        "typescript": "TypeScript",
-    }
-    return display_names.get(skill, skill)
-
-
-def _score_cap_for_detected_skills(job_skills: set[str]) -> int:
-    skill_count = len(job_skills)
+def _score_cap_for_requirement_analysis(requirement_analysis: JobRequirementAnalysis) -> int:
+    skill_count = (
+        len(requirement_analysis.must_have_skills)
+        + len(requirement_analysis.nice_to_have_skills)
+    )
     if skill_count <= 2:
         return 75
     if skill_count == 3:
         return 85
     if skill_count == 4:
         return 92
+    if requirement_analysis.missing_must_have_skills:
+        return 88
     return 100
+
+
+def _score_confidence(detected_skill_count: int) -> str:
+    if detected_skill_count <= 2:
+        return "low"
+    if detected_skill_count <= 4:
+        return "medium"
+    return "high"

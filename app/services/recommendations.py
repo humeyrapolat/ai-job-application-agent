@@ -1,3 +1,4 @@
+import re
 from dataclasses import dataclass
 from typing import Literal
 
@@ -8,7 +9,7 @@ from app.services.llm_provider import (
     create_llm_provider,
 )
 
-AIRecommendationStatus = Literal["not_requested", "generated", "unavailable"]
+AIRecommendationStatus = Literal["not_requested", "generated", "unavailable", "fallback"]
 
 
 @dataclass(frozen=True)
@@ -47,14 +48,10 @@ class CVRecommendationEngine:
                         "by the CV text."
                     ),
                     suggested_change=(
-                        "Add a project or experience bullet that demonstrates: "
+                        "If you already have real evidence, add a project bullet for: "
                         + ", ".join(missing_skills[:3])
-                        + "."
-                    ),
-                    example_bullet=(
-                        "Built a backend feature using "
-                        + ", ".join(missing_skills[:3])
-                        + " and documented the implementation with tests."
+                        + ". Otherwise, build a small focused project before claiming "
+                        "these skills on the CV."
                     ),
                 )
             )
@@ -159,7 +156,17 @@ class CVRecommendationEngine:
         except LLMProviderError:
             return CVRecommendationResult(
                 recommendations=recommendations,
-                ai_status="unavailable",
+                ai_status="fallback",
+            )
+
+        if _recommendations_have_unsupported_claims(
+            recommendations=ai_recommendations,
+            cv_text=cv_text,
+            missing_skills=missing_skills,
+        ):
+            return CVRecommendationResult(
+                recommendations=recommendations,
+                ai_status="fallback",
             )
 
         return CVRecommendationResult(
@@ -181,3 +188,50 @@ def _mentions_impact(text: str) -> bool:
         "%",
     )
     return any(term in lowered for term in impact_terms)
+
+
+def _recommendations_have_unsupported_claims(
+    *,
+    recommendations: list[CVRecommendation],
+    cv_text: str,
+    missing_skills: list[str],
+) -> bool:
+    combined_text = "\n".join(
+        "\n".join(
+            part
+            for part in (
+                recommendation.title,
+                recommendation.explanation,
+                recommendation.suggested_change,
+                recommendation.example_bullet or "",
+            )
+            if part
+        )
+        for recommendation in recommendations
+    )
+    if _contains_unsupported_metric(combined_text, cv_text):
+        return True
+
+    return any(
+        recommendation.example_bullet
+        and _contains_term(recommendation.example_bullet, missing_skill)
+        and not _contains_term(cv_text, missing_skill)
+        for recommendation in recommendations
+        for missing_skill in missing_skills
+    )
+
+
+def _contains_unsupported_metric(generated_text: str, cv_text: str) -> bool:
+    metric_pattern = re.compile(
+        r"\b\d+(?:\.\d+)?\s?(?:%|ms|s|sec|seconds|minutes|hours|rps|requests|k)\b",
+        re.IGNORECASE,
+    )
+    return any(
+        match.group(0).lower() not in cv_text.lower()
+        for match in metric_pattern.finditer(generated_text)
+    )
+
+
+def _contains_term(text: str, term: str) -> bool:
+    escaped = re.escape(term.lower())
+    return re.search(rf"(?<![a-z0-9]){escaped}(?![a-z0-9])", text.lower()) is not None

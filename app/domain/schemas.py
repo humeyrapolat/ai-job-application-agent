@@ -45,6 +45,28 @@ class CVRecommendation(BaseModel):
     example_bullet: str | None = None
 
 
+class JobRequirementAnalysis(BaseModel):
+    must_have_skills: list[str]
+    nice_to_have_skills: list[str]
+    matched_must_have_skills: list[str]
+    missing_must_have_skills: list[str]
+    matched_nice_to_have_skills: list[str]
+    missing_nice_to_have_skills: list[str]
+    language_requirements: list[str]
+    location_requirements: list[str]
+    degree_requirements: list[str]
+    seniority: str
+
+
+class ScoreBreakdown(BaseModel):
+    must_have_score: int = Field(..., ge=0, le=70)
+    nice_to_have_score: int = Field(..., ge=0, le=15)
+    evidence_score: int = Field(..., ge=0, le=10)
+    adjacent_skill_score: int = Field(..., ge=0, le=5)
+    score_cap: int = Field(..., ge=0, le=100)
+    confidence: Literal["low", "medium", "high"]
+
+
 class AnalyzeApplicationResponse(BaseModel):
     candidate_name: str
     job_title: str
@@ -54,10 +76,13 @@ class AnalyzeApplicationResponse(BaseModel):
     matched_skills: list[str]
     missing_skills: list[str]
     extra_candidate_skills: list[str]
+    requirement_analysis: JobRequirementAnalysis
+    score_breakdown: ScoreBreakdown
     recommendations: list[str]
     cv_recommendations: list[CVRecommendation]
-    ai_recommendation_status: Literal["not_requested", "generated", "unavailable"]
+    ai_recommendation_status: Literal["not_requested", "generated", "unavailable", "fallback"]
     cover_letter_draft: str
+    cover_letter_status: Literal["deterministic", "generated", "fallback"]
     workflow_actions: list[WorkflowAction]
     explanation: str
 

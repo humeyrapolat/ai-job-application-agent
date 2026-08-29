@@ -1,6 +1,7 @@
 import re
 
 SKILL_ALIASES: dict[str, tuple[str, ...]] = {
+    "ai": ("ai", "ai/ml", "artificial intelligence", "machine learning", "ml", "openai"),
     "python": ("python", "py"),
     "fastapi": ("fastapi", "fast api"),
     "django": ("django",),
@@ -12,7 +13,14 @@ SKILL_ALIASES: dict[str, tuple[str, ...]] = {
     "redis": ("redis",),
     "docker": ("docker", "container", "containers"),
     "kubernetes": ("kubernetes", "k8s"),
-    "rest api": ("rest api", "restful", "api development"),
+    "rest api": (
+        "rest api",
+        "rest apis",
+        "rest endpoint",
+        "rest endpoints",
+        "restful",
+        "api development",
+    ),
     "graphql": ("graphql",),
     "neo4j": ("neo4j", "graph database", "graph databases"),
     "git": ("git", "github", "gitlab"),
@@ -20,8 +28,16 @@ SKILL_ALIASES: dict[str, tuple[str, ...]] = {
     "testing": ("pytest", "unit test", "unit tests", "integration test", "testing"),
     "nlp": ("nlp", "natural language processing"),
     "openai api": ("openai", "openai api", "gpt", "chatgpt"),
-    "llm": ("llm", "large language model", "language model"),
+    "llm": (
+        "llm",
+        "large language model",
+        "language model",
+        "openai api",
+        "gpt",
+        "chatgpt",
+    ),
     "rag": ("rag", "retrieval augmented generation", "vector search"),
+    "vector database": ("vector database", "vector databases", "vector db", "embeddings"),
     "langchain": ("langchain",),
     "langgraph": ("langgraph",),
     "n8n": ("n8n",),

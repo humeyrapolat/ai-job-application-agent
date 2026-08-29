@@ -3,13 +3,20 @@ const SAMPLE = {
   job_title: "Junior AI Backend Developer",
   company_name: "Example GmbH",
   cv_text:
-    "I built Python APIs with FastAPI, PostgreSQL, Docker, REST APIs, Git and testing for backend projects.",
+    "I built AI backend projects with Python, FastAPI, PostgreSQL, Docker, REST APIs, Git, testing, and OpenAI API integrations.",
   job_description:
-    "We need a junior developer with Python, FastAPI, PostgreSQL, Docker, REST APIs, Git, LLM experience, RAG, AWS and CI/CD.",
+    "Requirements: Python, FastAPI, PostgreSQL, Docker, REST APIs, Git, LLM experience, and testing. Nice to have: RAG, AWS, and CI/CD. German B2 and English fluent are required. Hybrid role in Berlin. Bachelor's degree in computer science or related field.",
 };
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8001";
 const MAX_CV_FILE_BYTES = 5 * 1024 * 1024;
+const STATUS_LABELS = {
+  deterministic: "local draft",
+  fallback: "safety fallback",
+  generated: "AI generated",
+  not_requested: "not requested",
+  unavailable: "unavailable",
+};
 
 const form = document.querySelector("#analysisForm");
 const sampleButton = document.querySelector("#sampleButton");
@@ -146,16 +153,73 @@ function renderResult(result) {
   setText("#scoreValue", result.match_score);
   document.querySelector("#scoreBar").style.width = `${Math.max(0, result.match_score)}%`;
   setText("#seniorityValue", result.seniority_signal);
-  setText("#aiStatus", `AI recommendations: ${result.ai_recommendation_status}`);
+  setText("#aiStatus", `AI recommendations: ${formatStatus(result.ai_recommendation_status)}`);
+  setText("#coverLetterStatus", `Cover letter: ${formatStatus(result.cover_letter_status)}`);
   setText("#explanation", result.explanation);
   setText("#coverLetter", result.cover_letter_draft);
 
   renderChips("#matchedSkills", result.matched_skills, "matched");
   renderChips("#missingSkills", result.missing_skills, "missing");
   renderChips("#extraSkills", result.extra_candidate_skills, "extra");
+  renderRequirementAnalysis(result.requirement_analysis);
+  renderScoreBreakdown(result.score_breakdown);
   renderPlainList("#recommendations", result.recommendations);
   renderCvRecommendations(result.cv_recommendations);
   renderWorkflowActions(result.workflow_actions);
+}
+
+function renderRequirementAnalysis(requirements) {
+  renderCoverageChips(
+    "#mustHaveSkills",
+    requirements.must_have_skills,
+    requirements.matched_must_have_skills,
+    "missing",
+  );
+  renderCoverageChips(
+    "#niceToHaveSkills",
+    requirements.nice_to_have_skills,
+    requirements.matched_nice_to_have_skills,
+    "extra",
+  );
+  renderChips("#languageRequirements", requirements.language_requirements, "matched");
+  renderChips("#locationRequirements", requirements.location_requirements, "extra");
+  renderChips("#degreeRequirements", requirements.degree_requirements, "matched");
+}
+
+function renderCoverageChips(selector, items, matchedItems, missingVariant) {
+  const container = document.querySelector(selector);
+  replaceChildren(container);
+
+  if (!items.length) {
+    container.append(createElement("span", "chip empty", "None"));
+    return;
+  }
+
+  const matchedSet = new Set(matchedItems);
+  for (const item of items) {
+    const variant = matchedSet.has(item) ? "matched" : missingVariant;
+    container.append(createElement("span", `chip ${variant}`, item));
+  }
+}
+
+function renderScoreBreakdown(breakdown) {
+  const container = document.querySelector("#scoreBreakdown");
+  replaceChildren(container);
+
+  const items = [
+    ["Must-have", `${breakdown.must_have_score}/70`],
+    ["Nice-to-have", `${breakdown.nice_to_have_score}/15`],
+    ["Evidence", `${breakdown.evidence_score}/10`],
+    ["Adjacent", `${breakdown.adjacent_skill_score}/5`],
+    ["Cap", breakdown.score_cap],
+    ["Confidence", breakdown.confidence],
+  ];
+
+  for (const [label, value] of items) {
+    const card = createElement("article", "score-breakdown-item");
+    card.append(createElement("span", "", label), createElement("strong", "", value));
+    container.append(card);
+  }
 }
 
 function renderChips(selector, items, variant) {
@@ -247,6 +311,10 @@ function setStatus(status, message) {
 function setBusy(isBusy) {
   submitButton.disabled = isBusy;
   submitButton.textContent = isBusy ? "Analyzing..." : "Analyze CV";
+}
+
+function formatStatus(status) {
+  return STATUS_LABELS[status] || status;
 }
 
 function readFileAsBase64(file) {
