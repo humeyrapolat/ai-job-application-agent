@@ -5,7 +5,7 @@ from app.domain.schemas import CVRecommendation
 from app.services.llm_provider import (
     LLMProviderError,
     LLMRecommendationProvider,
-    OpenAIResponsesProvider,
+    create_llm_provider,
 )
 
 AIRecommendationStatus = Literal["not_requested", "generated", "unavailable"]
@@ -19,7 +19,7 @@ class CVRecommendationResult:
 
 class CVRecommendationEngine:
     def __init__(self, llm_provider: LLMRecommendationProvider | None = None) -> None:
-        self.llm_provider = llm_provider or OpenAIResponsesProvider()
+        self.llm_provider = llm_provider or create_llm_provider()
 
     def build(
         self,
