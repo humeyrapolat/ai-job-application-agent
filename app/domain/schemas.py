@@ -12,6 +12,18 @@ class AnalyzeApplicationRequest(BaseModel):
     use_ai_recommendations: bool = Field(default=False)
 
 
+class ExtractDocumentTextRequest(BaseModel):
+    filename: str = Field(..., min_length=1, examples=["cv.pdf"])
+    content_base64: str = Field(..., min_length=1)
+    content_type: str = Field(default="")
+
+
+class ExtractDocumentTextResponse(BaseModel):
+    filename: str
+    text: str
+    character_count: int
+
+
 class WorkflowAction(BaseModel):
     kind: Literal["email_draft", "status_update", "learning_plan", "manual_review"]
     title: str

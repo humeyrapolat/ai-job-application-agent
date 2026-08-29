@@ -213,10 +213,34 @@ textarea {
   line-height: 1.5;
 }
 
+input[type="file"] {
+  padding: 10px 12px;
+}
+
 input:focus,
 textarea:focus {
   border-color: var(--teal);
   box-shadow: 0 0 0 3px rgba(15, 118, 110, 0.14);
+}
+
+.cv-file-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(180px, max-content);
+  align-items: end;
+  gap: 12px;
+}
+
+.file-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  font-weight: 800;
 }
 
 .control-row {
@@ -537,6 +561,7 @@ pre {
   }
 
   .section-heading,
+  .cv-file-row,
   .control-row,
   .score-strip {
     grid-template-columns: 1fr;

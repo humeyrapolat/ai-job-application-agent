@@ -9,12 +9,15 @@ const SAMPLE = {
 };
 
 const DEFAULT_API_BASE_URL = "http://127.0.0.1:8001";
+const MAX_CV_FILE_BYTES = 5 * 1024 * 1024;
 
 const form = document.querySelector("#analysisForm");
 const sampleButton = document.querySelector("#sampleButton");
 const healthButton = document.querySelector("#healthButton");
 const submitButton = document.querySelector("#submitButton");
 const apiBaseUrlInput = document.querySelector("#apiBaseUrl");
+const cvFileInput = document.querySelector("#cvFile");
+const cvFileStatus = document.querySelector("#cvFileStatus");
 const statusDot = document.querySelector("#statusDot");
 const statusText = document.querySelector("#statusText");
 const emptyState = document.querySelector("#emptyState");
@@ -25,6 +28,7 @@ fillSample();
 
 sampleButton.addEventListener("click", fillSample);
 healthButton.addEventListener("click", () => checkHealth());
+cvFileInput.addEventListener("change", () => handleCvFileChange());
 apiBaseUrlInput.addEventListener("change", () => {
   localStorage.setItem("apiBaseUrl", cleanApiBaseUrl());
 });
@@ -65,8 +69,51 @@ async function checkHealth() {
       throw new Error("API health check failed");
     }
     setStatus("online", "API online");
-  } catch {
-    setStatus("offline", "API offline");
+  } catch (error) {
+    setStatus("offline", error.message || "API offline");
+  }
+}
+
+async function handleCvFileChange() {
+  const file = cvFileInput.files[0];
+  if (!file) {
+    cvFileStatus.textContent = "No file selected";
+    return;
+  }
+
+  if (file.size > MAX_CV_FILE_BYTES) {
+    cvFileStatus.textContent = "File is over 5 MB";
+    setStatus("offline", "CV file is too large");
+    return;
+  }
+
+  setStatus("checking", "Extracting CV...");
+  cvFileStatus.textContent = "Reading file...";
+
+  try {
+    localStorage.setItem("apiBaseUrl", cleanApiBaseUrl());
+    const contentBase64 = await readFileAsBase64(file);
+    const response = await fetch(`${cleanApiBaseUrl()}/documents/extract-text`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        filename: file.name,
+        content_base64: contentBase64,
+        content_type: file.type,
+      }),
+    });
+
+    const payload = await response.json();
+    if (!response.ok) {
+      throw new Error(readApiError(payload));
+    }
+
+    form.elements.cv_text.value = payload.text;
+    cvFileStatus.textContent = `${file.name} - ${payload.character_count} characters`;
+    setStatus("online", "CV file loaded");
+  } catch (error) {
+    cvFileStatus.textContent = error.message || "CV file could not be read";
+    setStatus("offline", error.message || "CV file could not be read");
   }
 }
 
@@ -200,6 +247,32 @@ function setStatus(status, message) {
 function setBusy(isBusy) {
   submitButton.disabled = isBusy;
   submitButton.textContent = isBusy ? "Analyzing..." : "Analyze CV";
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      resolve(arrayBufferToBase64(reader.result));
+    });
+    reader.addEventListener("error", () => {
+      reject(new Error("CV file could not be read"));
+    });
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function arrayBufferToBase64(buffer) {
+  const bytes = new Uint8Array(buffer);
+  const chunkSize = 32768;
+  let binary = "";
+
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    const chunk = bytes.subarray(index, index + chunkSize);
+    binary += String.fromCharCode(...chunk);
+  }
+
+  return btoa(binary);
 }
 
 function readApiError(payload) {

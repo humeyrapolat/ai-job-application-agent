@@ -6,9 +6,12 @@ from app.core.database import initialize_database
 from app.domain.schemas import (
     AnalyzeApplicationRequest,
     ApplicationSummary,
+    ExtractDocumentTextRequest,
+    ExtractDocumentTextResponse,
     StoredAnalyzeApplicationResponse,
 )
 from app.services.agent import JobApplicationAgent
+from app.services.document_text import DocumentTextExtractionError, extract_document_text
 from app.services.repository import ApplicationRepository
 from app.services.skills import KNOWN_SKILLS
 
@@ -26,6 +29,25 @@ def health() -> dict[str, str]:
 @router.get("/skills")
 def list_known_skills() -> dict[str, list[str]]:
     return {"skills": sorted(KNOWN_SKILLS)}
+
+
+@router.post("/documents/extract-text", response_model=ExtractDocumentTextResponse)
+def extract_text_from_document(
+    payload: ExtractDocumentTextRequest,
+) -> ExtractDocumentTextResponse:
+    try:
+        text = extract_document_text(
+            filename=payload.filename,
+            content_base64=payload.content_base64,
+        )
+    except DocumentTextExtractionError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    return ExtractDocumentTextResponse(
+        filename=payload.filename,
+        text=text,
+        character_count=len(text),
+    )
 
 
 @router.post("/applications/analyze", response_model=StoredAnalyzeApplicationResponse)

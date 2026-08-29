@@ -109,6 +109,24 @@ def test_agent_uses_job_title_for_seniority_signal() -> None:
     assert response.seniority_signal == "junior"
 
 
+def test_agent_drafts_more_specific_cover_letter() -> None:
+    payload = AnalyzeApplicationRequest(
+        candidate_name="Ada Lovelace",
+        job_title="AI Backend Developer",
+        company_name="Example GmbH",
+        cv_text="I built Python APIs with FastAPI, Git, and testing.",
+        job_description="We need Python, FastAPI, Docker, REST APIs, and tests.",
+    )
+
+    response = JobApplicationAgent().analyze(payload)
+
+    assert "Dear Example GmbH team," in response.cover_letter_draft
+    assert "AI Backend Developer" in response.cover_letter_draft
+    assert "FastAPI" in response.cover_letter_draft
+    assert "Where the role asks for Docker" in response.cover_letter_draft
+    assert response.cover_letter_draft.count("\n\n") >= 4
+
+
 def test_agent_returns_structured_cv_recommendations() -> None:
     payload = AnalyzeApplicationRequest(
         candidate_name="Ada Lovelace",

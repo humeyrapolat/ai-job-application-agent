@@ -1,3 +1,4 @@
+import base64
 from pathlib import Path
 
 import pytest
@@ -35,6 +36,25 @@ def test_api_accepts_frontend_cors_preflight(client: TestClient) -> None:
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:5173"
+
+
+def test_extract_document_text_endpoint(client: TestClient) -> None:
+    response = client.post(
+        "/documents/extract-text",
+        json={
+            "filename": "cv.txt",
+            "content_base64": base64.b64encode(
+                b"Python FastAPI backend project with Docker, tests, and REST APIs."
+            ).decode("ascii"),
+            "content_type": "text/plain",
+        },
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["filename"] == "cv.txt"
+    assert "Python FastAPI backend project" in body["text"]
+    assert body["character_count"] == len(body["text"])
 
 
 def test_analyze_application_endpoint(client: TestClient) -> None:
