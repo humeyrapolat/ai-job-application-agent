@@ -27,7 +27,9 @@ class JobApplicationAgent:
             extra_candidate_skills=set(extra_candidate_skills),
             cv_text=payload.cv_text,
         )
-        seniority_signal = self._infer_seniority(payload.job_description)
+        seniority_signal = self._infer_seniority(
+            f"{payload.job_title}\n{payload.job_description}"
+        )
         recommendations = self._build_recommendations(
             match_score=match_score,
             missing_skills=missing_skills,
@@ -75,7 +77,12 @@ class JobApplicationAgent:
             ai_recommendation_status=cv_recommendation_result.ai_status,
             cover_letter_draft=cover_letter_draft,
             workflow_actions=workflow_actions,
-            explanation=self._explain(match_score, matched_skills, missing_skills),
+            explanation=self._explain(
+                match_score,
+                matched_skills,
+                missing_skills,
+                detected_job_skill_count=len(job_skills),
+            ),
         )
 
     @staticmethod
@@ -89,11 +96,15 @@ class JobApplicationAgent:
         if not job_skills:
             return 50
 
-        required_skill_score = len(matched_skills) / len(job_skills) * 80
-        extra_skill_bonus = min(len(extra_candidate_skills), 4) * 3
-        experience_bonus = 8 if _mentions_experience(cv_text) else 0
+        required_skill_score = len(matched_skills) / len(job_skills) * 85
+        extra_skill_bonus = min(len(extra_candidate_skills), 3) * 2
+        experience_bonus = 5 if _mentions_experience(cv_text) else 0
+        evidence_cap = _score_cap_for_detected_skills(job_skills)
 
-        return min(100, round(required_skill_score + extra_skill_bonus + experience_bonus))
+        return min(
+            evidence_cap,
+            round(required_skill_score + extra_skill_bonus + experience_bonus),
+        )
 
     @staticmethod
     def _infer_seniority(job_description: str) -> str:
@@ -163,13 +174,38 @@ class JobApplicationAgent:
         )
 
     @staticmethod
-    def _explain(match_score: int, matched_skills: list[str], missing_skills: list[str]) -> str:
-        return (
+    def _explain(
+        match_score: int,
+        matched_skills: list[str],
+        missing_skills: list[str],
+        *,
+        detected_job_skill_count: int,
+    ) -> str:
+        explanation = (
             f"The score is {match_score}/100 because the CV matched "
             f"{len(matched_skills)} required skill(s) and missed {len(missing_skills)}."
         )
+
+        if detected_job_skill_count <= 2:
+            explanation += (
+                f" Only {detected_job_skill_count} role skill(s) were detected, so the score "
+                "is capped instead of treated as a perfect fit."
+            )
+
+        return explanation
 
 
 def _mentions_experience(text: str) -> bool:
     lowered = text.lower()
     return any(term in lowered for term in ("experience", "project", "built", "developed"))
+
+
+def _score_cap_for_detected_skills(job_skills: set[str]) -> int:
+    skill_count = len(job_skills)
+    if skill_count <= 2:
+        return 75
+    if skill_count == 3:
+        return 85
+    if skill_count == 4:
+        return 92
+    return 100

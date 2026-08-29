@@ -14,9 +14,11 @@ SKILL_ALIASES: dict[str, tuple[str, ...]] = {
     "kubernetes": ("kubernetes", "k8s"),
     "rest api": ("rest api", "restful", "api development"),
     "graphql": ("graphql",),
+    "neo4j": ("neo4j", "graph database", "graph databases"),
     "git": ("git", "github", "gitlab"),
     "ci/cd": ("ci/cd", "github actions", "gitlab ci", "continuous integration"),
     "testing": ("pytest", "unit test", "unit tests", "integration test", "testing"),
+    "nlp": ("nlp", "natural language processing"),
     "openai api": ("openai", "openai api", "gpt", "chatgpt"),
     "llm": ("llm", "large language model", "language model"),
     "rag": ("rag", "retrieval augmented generation", "vector search"),
@@ -54,4 +56,3 @@ def _normalize(text: str) -> str:
 def _contains_alias(text: str, alias: str) -> bool:
     escaped = re.escape(alias.lower())
     return re.search(rf"(?<![a-z0-9]){escaped}(?![a-z0-9])", text) is not None
-

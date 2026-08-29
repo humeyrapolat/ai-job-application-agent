@@ -76,6 +76,39 @@ def test_agent_recommends_learning_plan_when_skills_are_missing() -> None:
     assert any(action.kind == "learning_plan" for action in response.workflow_actions)
 
 
+def test_agent_caps_perfect_score_when_job_skill_evidence_is_limited() -> None:
+    payload = AnalyzeApplicationRequest(
+        candidate_name="Ada Lovelace",
+        job_title="Backend Developer",
+        company_name="Example GmbH",
+        cv_text=(
+            "I built Python REST API projects with FastAPI, Docker, Git, testing, "
+            "React, TypeScript, and SQLite."
+        ),
+        job_description="We need Python and REST API experience.",
+    )
+
+    response = JobApplicationAgent().analyze(payload)
+
+    assert response.match_score == 75
+    assert response.matched_skills == ["python", "rest api"]
+    assert "capped instead of treated as a perfect fit" in response.explanation
+
+
+def test_agent_uses_job_title_for_seniority_signal() -> None:
+    payload = AnalyzeApplicationRequest(
+        candidate_name="Ada Lovelace",
+        job_title="Junior AI Backend Developer",
+        company_name="Example GmbH",
+        cv_text="I built Python APIs with FastAPI, Git, and testing.",
+        job_description="We need Python, FastAPI, REST APIs, and tests.",
+    )
+
+    response = JobApplicationAgent().analyze(payload)
+
+    assert response.seniority_signal == "junior"
+
+
 def test_agent_returns_structured_cv_recommendations() -> None:
     payload = AnalyzeApplicationRequest(
         candidate_name="Ada Lovelace",
