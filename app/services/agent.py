@@ -211,7 +211,8 @@ class JobApplicationAgent:
         score_breakdown: ScoreBreakdown,
     ) -> str:
         explanation = (
-            f"The score is {match_score}/100 using weighted requirement coverage: "
+            f"The ATS compatibility score is {match_score}/100 using weighted "
+            "requirement coverage: "
             f"{len(requirement_analysis.matched_must_have_skills)}/"
             f"{len(requirement_analysis.must_have_skills)} must-have skill(s) and "
             f"{len(requirement_analysis.matched_nice_to_have_skills)}/"

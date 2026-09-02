@@ -31,7 +31,6 @@ const emptyState = document.querySelector("#emptyState");
 const resultContent = document.querySelector("#resultContent");
 
 apiBaseUrlInput.value = localStorage.getItem("apiBaseUrl") || DEFAULT_API_BASE_URL;
-fillSample();
 
 sampleButton.addEventListener("click", fillSample);
 healthButton.addEventListener("click", () => checkHealth());
@@ -84,7 +83,16 @@ async function checkHealth() {
 async function handleCvFileChange() {
   const file = cvFileInput.files[0];
   if (!file) {
-    cvFileStatus.textContent = "No file selected";
+    form.elements.cv_text.value = "";
+    cvFileStatus.textContent = "Upload one PDF CV";
+    return;
+  }
+
+  if (!isPdfFile(file)) {
+    cvFileInput.value = "";
+    form.elements.cv_text.value = "";
+    cvFileStatus.textContent = "PDF only";
+    setStatus("offline", "Please upload a PDF CV");
     return;
   }
 
@@ -116,9 +124,10 @@ async function handleCvFileChange() {
     }
 
     form.elements.cv_text.value = payload.text;
-    cvFileStatus.textContent = `${file.name} - ${payload.character_count} characters`;
-    setStatus("online", "CV file loaded");
+    cvFileStatus.textContent = `${file.name} ready`;
+    setStatus("online", "CV PDF ready");
   } catch (error) {
+    form.elements.cv_text.value = "";
     cvFileStatus.textContent = error.message || "CV file could not be read";
     setStatus("offline", error.message || "CV file could not be read");
   }
@@ -128,14 +137,21 @@ function fillSample() {
   for (const [name, value] of Object.entries(SAMPLE)) {
     form.elements[name].value = value;
   }
+  cvFileInput.value = "";
+  cvFileStatus.textContent = "Sample CV loaded";
 }
 
 function readPayload() {
+  const cvText = form.elements.cv_text.value.trim();
+  if (cvText.length < 20) {
+    throw new Error("Upload a PDF CV before running the ATS scan");
+  }
+
   return {
     candidate_name: form.elements.candidate_name.value.trim(),
     job_title: form.elements.job_title.value.trim(),
     company_name: form.elements.company_name.value.trim(),
-    cv_text: form.elements.cv_text.value.trim(),
+    cv_text: cvText,
     job_description: form.elements.job_description.value.trim(),
     use_ai_recommendations: form.elements.use_ai_recommendations.checked,
   };
@@ -310,11 +326,15 @@ function setStatus(status, message) {
 
 function setBusy(isBusy) {
   submitButton.disabled = isBusy;
-  submitButton.textContent = isBusy ? "Analyzing..." : "Analyze CV";
+  submitButton.textContent = isBusy ? "Running ATS scan..." : "Run ATS scan";
 }
 
 function formatStatus(status) {
   return STATUS_LABELS[status] || status;
+}
+
+function isPdfFile(file) {
+  return file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
 }
 
 function readFileAsBase64(file) {

@@ -6,14 +6,14 @@
     <title>AI Job Application Agent</title>
     <meta
       name="description"
-      content="Analyze a CV against a job description and return structured application recommendations."
+      content="Run an ATS-style CV compatibility scan against a job description."
     />
-    <link rel="stylesheet" href="./styles.css" />
+    <link rel="stylesheet" href="./styles.css?v=ats-pdf-scan" />
   </head>
   <body>
     <header class="topbar">
       <div>
-        <p class="eyebrow">Candidate Fit Console</p>
+        <p class="eyebrow">ATS Fit Console</p>
         <h1>AI Job Application Agent</h1>
       </div>
       <div class="api-card" aria-live="polite">
@@ -27,9 +27,9 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Input</p>
-            <h2 id="formTitle">Application Details</h2>
+            <h2 id="formTitle">ATS Scan</h2>
           </div>
-          <button class="secondary-button" type="button" id="sampleButton">Fill sample</button>
+          <button class="secondary-button" type="button" id="sampleButton">Load sample</button>
         </div>
 
         <form id="analysisForm">
@@ -51,21 +51,21 @@
           <div class="field-stack">
             <div class="cv-file-row">
               <label>
-                CV file
+                CV PDF
                 <input
                   name="cv_file"
                   id="cvFile"
                   type="file"
-                  accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
+                  accept=".pdf,application/pdf"
                 />
               </label>
-              <span class="file-status" id="cvFileStatus">No file selected</span>
+              <span class="file-status" id="cvFileStatus">Upload one PDF CV</span>
             </div>
-            <label>
-              CV text
-              <textarea name="cv_text" minlength="20" required></textarea>
-            </label>
-            <p class="privacy-note">Remove sensitive personal details before uploading a CV.</p>
+            <input type="hidden" name="cv_text" />
+            <p class="privacy-note">
+              Remove sensitive personal details before scanning. The PDF text is extracted before
+              the ATS analysis runs.
+            </p>
             <label>
               Job description
               <textarea name="job_description" minlength="20" required></textarea>
@@ -84,7 +84,7 @@
           </div>
 
           <div class="button-row">
-            <button class="primary-button" type="submit" id="submitButton">Analyze CV</button>
+            <button class="primary-button" type="submit" id="submitButton">Run ATS scan</button>
             <button class="secondary-button" type="button" id="healthButton">Check API</button>
           </div>
         </form>
@@ -94,7 +94,7 @@
         <div class="section-heading">
           <div>
             <p class="eyebrow">Output</p>
-            <h2 id="resultTitle">Analysis Result</h2>
+            <h2 id="resultTitle">ATS Analysis Result</h2>
           </div>
           <span class="result-id" id="resultId">No result</span>
         </div>
@@ -103,7 +103,7 @@
         <div class="result-content hidden" id="resultContent">
           <div class="score-strip">
             <div>
-              <span class="score-label">Match score</span>
+              <span class="score-label">ATS compatibility score</span>
               <strong id="scoreValue">0</strong>
             </div>
             <div class="meter" aria-hidden="true">
@@ -114,11 +114,11 @@
 
           <div class="skill-grid">
             <article>
-              <h3>Matched skills</h3>
+              <h3>Matched ATS keywords</h3>
               <div class="chip-list" id="matchedSkills"></div>
             </article>
             <article>
-              <h3>Missing skills</h3>
+              <h3>Missing ATS keywords</h3>
               <div class="chip-list" id="missingSkills"></div>
             </article>
             <article>
@@ -186,6 +186,6 @@
       </section>
     </main>
 
-    <script src="./app.js"></script>
+    <script src="./app.js?v=ats-pdf-scan"></script>
   </body>
 </html>
