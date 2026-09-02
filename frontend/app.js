@@ -25,6 +25,7 @@ const submitButton = document.querySelector("#submitButton");
 const apiBaseUrlInput = document.querySelector("#apiBaseUrl");
 const cvFileInput = document.querySelector("#cvFile");
 const cvFileStatus = document.querySelector("#cvFileStatus");
+const uploadZone = document.querySelector(".upload-zone");
 const statusDot = document.querySelector("#statusDot");
 const statusText = document.querySelector("#statusText");
 const emptyState = document.querySelector("#emptyState");
@@ -85,6 +86,7 @@ async function handleCvFileChange() {
   if (!file) {
     form.elements.cv_text.value = "";
     cvFileStatus.textContent = "Upload one PDF CV";
+    uploadZone.classList.remove("is-ready");
     return;
   }
 
@@ -92,6 +94,7 @@ async function handleCvFileChange() {
     cvFileInput.value = "";
     form.elements.cv_text.value = "";
     cvFileStatus.textContent = "PDF only";
+    uploadZone.classList.remove("is-ready");
     setStatus("offline", "Please upload a PDF CV");
     return;
   }
@@ -125,9 +128,11 @@ async function handleCvFileChange() {
 
     form.elements.cv_text.value = payload.text;
     cvFileStatus.textContent = `${file.name} ready`;
+    uploadZone.classList.add("is-ready");
     setStatus("online", "CV PDF ready");
   } catch (error) {
     form.elements.cv_text.value = "";
+    uploadZone.classList.remove("is-ready");
     cvFileStatus.textContent = error.message || "CV file could not be read";
     setStatus("offline", error.message || "CV file could not be read");
   }
@@ -139,6 +144,7 @@ function fillSample() {
   }
   cvFileInput.value = "";
   cvFileStatus.textContent = "Sample CV loaded";
+  uploadZone.classList.add("is-ready");
 }
 
 function readPayload() {

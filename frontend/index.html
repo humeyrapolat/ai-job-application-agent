@@ -8,7 +8,7 @@
       name="description"
       content="Run an ATS-style CV compatibility scan against a job description."
     />
-    <link rel="stylesheet" href="./styles.css?v=ats-pdf-scan" />
+    <link rel="stylesheet" href="./styles.css?v=modern-ats-console" />
   </head>
   <body>
     <header class="topbar">
@@ -49,18 +49,14 @@
           </div>
 
           <div class="field-stack">
-            <div class="cv-file-row">
-              <label>
-                CV PDF
-                <input
-                  name="cv_file"
-                  id="cvFile"
-                  type="file"
-                  accept=".pdf,application/pdf"
-                />
-              </label>
-              <span class="file-status" id="cvFileStatus">Upload one PDF CV</span>
-            </div>
+            <label class="upload-zone">
+              <input name="cv_file" id="cvFile" type="file" accept=".pdf,application/pdf" />
+              <span class="upload-mark" aria-hidden="true">PDF</span>
+              <span>
+                <strong>CV PDF</strong>
+                <small id="cvFileStatus">Upload one PDF CV</small>
+              </span>
+            </label>
             <input type="hidden" name="cv_text" />
             <p class="privacy-note">
               Remove sensitive personal details before scanning. The PDF text is extracted before
@@ -127,8 +123,10 @@
             </article>
           </div>
 
-          <div class="status-line" id="aiStatus"></div>
-          <div class="status-line" id="coverLetterStatus"></div>
+          <div class="status-grid">
+            <div class="status-line" id="aiStatus"></div>
+            <div class="status-line" id="coverLetterStatus"></div>
+          </div>
           <div class="explanation" id="explanation"></div>
 
           <div class="result-section">
@@ -186,6 +184,6 @@
       </section>
     </main>
 
-    <script src="./app.js?v=ats-pdf-scan"></script>
+    <script src="./app.js?v=modern-ats-console"></script>
   </body>
 </html>
