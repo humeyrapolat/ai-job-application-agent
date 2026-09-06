@@ -16,3 +16,12 @@ def test_extract_skills_detects_plural_rest_apis_and_ai_related_terms() -> None:
     )
 
     assert {"ai", "llm", "openai api", "rest api", "vector database"} <= skills
+
+
+def test_extract_skills_detects_agentic_ai_and_automation_terms() -> None:
+    skills = extract_skills(
+        "Built agentic AI prototypes with AI agents, AutoGen, CrewAI, guardrails, "
+        "and workflow automation."
+    )
+
+    assert {"ai agents", "automation", "autogen", "crewai", "guardrails"} <= skills

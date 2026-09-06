@@ -59,9 +59,10 @@ class JobRequirementAnalysis(BaseModel):
 
 
 class ScoreBreakdown(BaseModel):
-    must_have_score: int = Field(..., ge=0, le=70)
-    nice_to_have_score: int = Field(..., ge=0, le=15)
-    evidence_score: int = Field(..., ge=0, le=10)
+    hard_requirement_score: int = Field(..., ge=0, le=20)
+    technical_score: int = Field(..., ge=0, le=45)
+    preferred_score: int = Field(..., ge=0, le=15)
+    evidence_score: int = Field(..., ge=0, le=15)
     adjacent_skill_score: int = Field(..., ge=0, le=5)
     score_cap: int = Field(..., ge=0, le=100)
     confidence: Literal["low", "medium", "high"]

@@ -158,9 +158,53 @@ def test_agent_caps_perfect_score_when_job_skill_evidence_is_limited() -> None:
 
     response = JobApplicationAgent().analyze(payload)
 
-    assert response.match_score == 75
+    assert response.match_score == 72
     assert response.matched_skills == ["python", "rest api"]
-    assert "capped at 75" in response.explanation
+    assert response.score_breakdown.technical_score == 28
+    assert response.score_breakdown.confidence == "low"
+    assert "capped at 72" in response.explanation
+
+
+def test_agent_penalizes_unverified_hard_requirements() -> None:
+    payload = AnalyzeApplicationRequest(
+        candidate_name="Ada Lovelace",
+        job_title="Backend Developer",
+        company_name="Example GmbH",
+        cv_text="I built Python, FastAPI, and Docker API projects.",
+        job_description=(
+            "Requirements: Python, FastAPI, and Docker. German B2 is required. "
+            "Hybrid role in Berlin. Bachelor's degree in computer science or related field."
+        ),
+    )
+
+    response = JobApplicationAgent().analyze(payload)
+
+    assert response.match_score < 80
+    assert response.score_breakdown.hard_requirement_score < 20
+    assert response.score_breakdown.score_cap == 78
+    assert any("Verify hard requirements" in item for item in response.recommendations)
+
+
+def test_agent_rewards_verified_hard_requirements_and_project_evidence() -> None:
+    payload = AnalyzeApplicationRequest(
+        candidate_name="Ada Lovelace",
+        job_title="Backend Developer",
+        company_name="Example GmbH",
+        cv_text=(
+            "Berlin-based developer with German C1 and a Master degree in computer science. "
+            "I built Python, FastAPI, and Docker API projects and automated release checks."
+        ),
+        job_description=(
+            "Requirements: Python, FastAPI, and Docker. German B2 is required. "
+            "Hybrid role in Berlin. Bachelor's degree in computer science or related field."
+        ),
+    )
+
+    response = JobApplicationAgent().analyze(payload)
+
+    assert response.match_score >= 85
+    assert response.score_breakdown.hard_requirement_score == 20
+    assert response.score_breakdown.confidence == "high"
 
 
 def test_agent_uses_job_title_for_seniority_signal() -> None:
