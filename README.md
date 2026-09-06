@@ -1,89 +1,69 @@
 # AI Job Application Agent
 
-An AI-assisted ATS compatibility demo that compares a CV with a job description, highlights matched and missing role signals, and produces CV improvement recommendations plus a cover letter draft.
+A CV-to-job matching tool that scans a resume against a job description and returns an ATS-style compatibility report.
 
 Live demo: https://humeyrapolat.github.io/ai-job-application-agent/
 
-The project is built as a portfolio-ready product demo:
+## Overview
 
-- GitHub Pages hosts a static recruiter-facing frontend.
-- The frontend can run a browser-based demo analysis without a deployed backend.
-- A FastAPI backend is included for local API usage, PDF text extraction, persistence, and optional LLM calls.
-- Groq/OpenAI integration is backend-only so API keys are never exposed in the browser.
+The application helps candidates review how well a CV fits a target role before applying. It extracts text from a PDF resume, reads the job description, identifies relevant requirements, and returns a structured report with a compatibility score, matched keywords, missing keywords, CV improvement suggestions, and a cover letter draft.
 
-## What It Does
+The public demo runs on GitHub Pages and works without a deployed backend. PDF text extraction and the demo analysis run directly in the browser, so recruiters can try the project from the live link without any setup.
 
-- Upload a CV PDF.
-- Paste a job description.
-- Extract ATS-style skills and role signals.
-- Calculate a recruiter-weighted compatibility score.
-- Show matched skills, missing skills, extra candidate strengths, and score confidence.
-- Separate hard requirements from technical and preferred skills.
-- Generate CV recommendations.
-- Draft a cover letter.
-- Provide workflow actions for an application tracker or automation tool.
+## Features
 
-## Demo Mode
+- Upload a CV as a PDF
+- Paste a job description
+- Extract ATS-style keywords from both documents
+- Separate required skills, preferred skills, hard requirements, languages, location, and degree signals
+- Calculate a weighted compatibility score
+- Show matched, missing, and extra candidate skills
+- Generate CV improvement recommendations
+- Draft a role-specific cover letter
+- Use a local FastAPI backend for API workflows and optional provider-based recommendations
 
-The GitHub Pages version is designed to work even when the backend is not deployed.
+## Scoring
 
-When the API is unavailable, the frontend switches to demo mode:
+The score is a weighted compatibility score, not a simple keyword percentage.
 
-- PDF text is extracted in the browser using PDF.js.
-- CV and job text are analyzed locally in JavaScript.
-- No API key is required.
-- No CV data is sent to a server in demo mode.
-- The result is clearly marked as a demo result.
+| Signal | Weight |
+| ------ | ------ |
+| Hard requirements | 20 |
+| Required skills | 45 |
+| Preferred skills | 15 |
+| Evidence in the CV | 15 |
+| Adjacent relevant skills | 5 |
 
-This keeps the public portfolio link usable for recruiters without asking them to run terminal commands.
-
-## Scoring Model
-
-The score is not a generic keyword percentage. It is a weighted compatibility score:
-
-| Signal | Weight | Purpose |
-| ------ | ------ | ------- |
-| Hard requirements | 20 | Language, degree, location, or similar gatekeeping requirements |
-| Required skills | 45 | Core technical requirements from the role |
-| Preferred skills | 15 | Nice-to-have skills |
-| Evidence | 15 | Project, implementation, automation, or impact evidence in the CV |
-| Adjacent strengths | 5 | Relevant extra skills that support the role |
-
-The model also applies a confidence cap. If the job description exposes only a small number of measurable signals, the score is capped so a thin match is not presented as a perfect fit.
-
-## Current Limitations
-
-- This is a compatibility assistant, not a validated hiring model.
-- The public demo uses deterministic browser logic when no backend is available.
-- Live LLM-generated recommendations require running the backend with a Groq or OpenAI API key.
-- Accuracy, precision, recall, and F1 should only be claimed after building a labeled evaluation set of job descriptions and expected extracted requirements.
+The scoring model also applies confidence caps. If a job description contains only a few measurable signals, the result is capped so the application does not report a perfect match from limited evidence.
 
 ## Tech Stack
 
-- Frontend: HTML, CSS, vanilla JavaScript, PDF.js
-- Backend: Python 3.11, FastAPI, Pydantic
+- Frontend: HTML, CSS, JavaScript, PDF.js
+- Backend: Python, FastAPI, Pydantic
 - Storage: SQLite
-- AI provider layer: Groq-compatible Chat Completions and OpenAI Responses support
-- Quality: Pytest, Ruff, GitHub Actions, Docker
-- Hosting: GitHub Pages for the frontend
+- Testing: Pytest, Ruff
+- CI: GitHub Actions
+- Deployment: GitHub Pages
 
 ## Architecture
 
 ```text
-GitHub Pages Frontend
-  - CV PDF upload
-  - Browser demo analysis
-  - ATS results UI
-  - Optional connection to FastAPI backend
+frontend/
+  index.html
+  styles.css
+  app.js
 
-FastAPI Backend
-  - /documents/extract-text
-  - /applications/analyze
-  - /applications
-  - /applications/{application_id}
-  - SQLite repository
-  - Optional Groq/OpenAI provider
+app/
+  api/
+  core/
+  domain/
+  services/
+
+tests/
+  API, scoring, requirement parsing, document extraction, and provider tests
 ```
+
+The frontend contains the public demo flow. The backend contains the API, document extraction endpoint, scoring service, repository layer, and optional recommendation provider integration.
 
 ## Run Locally
 
@@ -110,38 +90,35 @@ Open:
 - Frontend: http://127.0.0.1:5173/
 - API docs: http://127.0.0.1:8001/docs
 
-## Optional LLM Setup
+## Environment Variables
 
-Create a local `.env` file from `.env.example` and add one provider key:
+Create a local `.env` file if you want to use provider-backed recommendations through the backend.
 
 ```bash
+APP_NAME="AI Job Application Agent"
+APP_ENV="local"
+LOG_LEVEL="INFO"
+CORS_ALLOW_ORIGINS="http://127.0.0.1:5173,http://localhost:5173,https://humeyrapolat.github.io"
+
 LLM_PROVIDER="groq"
 GROQ_API_KEY="your_groq_api_key_here"
 GROQ_MODEL="openai/gpt-oss-20b"
 ```
 
-or:
-
-```bash
-LLM_PROVIDER="openai"
-OPENAI_API_KEY="your_openai_api_key_here"
-OPENAI_MODEL="gpt-5.6-luna"
-```
-
-Never commit real API keys. `.env` is ignored by git.
+`.env` is ignored by git and should not be committed.
 
 ## API Endpoints
 
-| Method | Path                             | Description                         |
-| ------ | -------------------------------- | ----------------------------------- |
-| GET    | `/health`                        | Health check                        |
-| GET    | `/skills`                        | List known skills                   |
-| POST   | `/documents/extract-text`        | Extract readable text from a CV     |
-| POST   | `/applications/analyze`          | Analyze and store a job application |
-| GET    | `/applications`                  | List stored application analyses    |
-| GET    | `/applications/{application_id}` | Retrieve one stored analysis        |
+| Method | Path | Description |
+| ------ | ---- | ----------- |
+| GET | `/health` | Health check |
+| GET | `/skills` | List known skills |
+| POST | `/documents/extract-text` | Extract text from a CV PDF |
+| POST | `/applications/analyze` | Analyze a CV against a job description |
+| GET | `/applications` | List saved analyses |
+| GET | `/applications/{application_id}` | Retrieve one saved analysis |
 
-## Test And Lint
+## Quality Checks
 
 ```bash
 PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest
@@ -149,17 +126,9 @@ RUFF_CACHE_DIR=/tmp/ai-job-application-agent-ruff-cache .venv/bin/ruff check .
 node --check frontend/app.js
 ```
 
-## Deployment
+## Notes
 
-The frontend is deployed to GitHub Pages from the `frontend/` directory.
-
-The backend does not need to be deployed for the public demo to work. A Render blueprint is included in `render.yaml` for a future production backend deployment.
-
-## Project Status
-
-Finished portfolio demo version:
-
-- Static GitHub Pages demo works without backend deployment.
-- Local FastAPI backend remains available for real API usage.
-- Optional Groq/OpenAI calls are supported through the backend.
-- Recruiter-facing flow avoids technical API setup.
+- The GitHub Pages version is designed as a public project demo.
+- The local backend is available for API testing and future deployment.
+- The score should be described as an ATS-style compatibility score, not as a validated hiring accuracy metric.
+- Precision, recall, or F1 would require a labeled evaluation dataset.
