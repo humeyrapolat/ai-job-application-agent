@@ -22,6 +22,15 @@ const STATUS_LABELS = {
 };
 const SKILL_ALIASES = {
   ai: ["ai", "ai/ml", "artificial intelligence", "machine learning", "ml", "openai"],
+  analytics: [
+    "analytics",
+    "analytical thinking",
+    "analytical work",
+    "data analysis",
+    "data analyses",
+    "ad-hoc analyses",
+    "ad hoc analyses",
+  ],
   python: ["python", "py"],
   fastapi: ["fastapi", "fast api"],
   django: ["django"],
@@ -30,6 +39,9 @@ const SKILL_ALIASES = {
   mysql: ["mysql"],
   sqlite: ["sqlite"],
   mongodb: ["mongodb", "mongo"],
+  sql: ["sql"],
+  "data warehouse": ["data warehouse", "data warehouses"],
+  datasets: ["dataset", "datasets", "large datasets", "unstructured datasets", "unstructured data"],
   redis: ["redis"],
   docker: ["docker", "container", "containers"],
   kubernetes: ["kubernetes", "k8s"],
@@ -78,6 +90,7 @@ const SKILL_ALIASES = {
   "ai coding tools": [
     "ai coding tool",
     "ai coding tools",
+    "ai tools",
     "claude code",
     "copilot",
     "github copilot",
@@ -87,10 +100,26 @@ const SKILL_ALIASES = {
   autogen: ["autogen", "auto gen"],
   assertj: ["assertj", "assert j"],
   bash: ["bash", "shell script", "shell scripting"],
+  "business acumen": [
+    "business acumen",
+    "mrr",
+    "upselling",
+    "churn",
+    "churn prevention",
+    "revenue-generating",
+    "revenue generating",
+  ],
+  "business analysis": [
+    "business analyst",
+    "business analysis",
+    "business teams",
+    "business questions",
+  ],
   confluence: ["confluence"],
   crewai: ["crewai", "crew ai"],
   gradle: ["gradle"],
   guardrails: ["guardrails", "nemo guardrails", "nemoguardrails"],
+  "growth analytics": ["growth projects", "growth", "growth potential", "concrete growth"],
   intellij: ["intellij", "intellij idea"],
   java: ["java"],
   jira: ["jira"],
@@ -747,6 +776,8 @@ function scoreCapForRequirementAnalysis({ requirementAnalysis, hardRequirementSc
 
   if (skillCount === 0) {
     caps.push(50);
+  } else if (hasOnlyGenericRoleSignals(requirementAnalysis)) {
+    caps.push(55);
   } else if (confidence === "low") {
     caps.push(72);
   } else if (confidence === "medium") {
@@ -762,6 +793,15 @@ function scoreCapForRequirementAnalysis({ requirementAnalysis, hardRequirementSc
   }
 
   return Math.min(...caps);
+}
+
+function hasOnlyGenericRoleSignals(requirementAnalysis) {
+  const roleSignals = new Set([
+    ...requirementAnalysis.must_have_skills,
+    ...requirementAnalysis.nice_to_have_skills,
+  ]);
+  const genericSignals = new Set(["ai", "automation"]);
+  return Boolean(roleSignals.size) && [...roleSignals].every((signal) => genericSignals.has(signal));
 }
 
 function scoreConfidence({ detectedSkillCount, hardRequirementCount: requirementCount }) {
@@ -963,6 +1003,16 @@ function buildGrowthFocus(missingSkills) {
   }
   if (["javascript", "typescript", "vue", "react"].some((skill) => missing.has(skill))) {
     groupedFocus.push("frontend technologies");
+  }
+  if (
+    ["analytics", "business analysis", "data warehouse", "datasets", "sql"].some((skill) =>
+      missing.has(skill),
+    )
+  ) {
+    groupedFocus.push("data analysis");
+  }
+  if (["business acumen", "growth analytics"].some((skill) => missing.has(skill))) {
+    groupedFocus.push("business growth metrics");
   }
   if (
     ["aws", "mongodb", "bash", "jira", "confluence", "vscode", "intellij"].some((skill) =>
@@ -1542,20 +1592,26 @@ function formatSkillLabel(skill) {
     ai: "AI",
     "ai agents": "AI agents",
     "ai coding tools": "AI coding tools",
+    analytics: "analytics",
     assertj: "AssertJ",
     autogen: "AutoGen",
     automation: "automation",
     aws: "AWS",
     azure: "Azure",
     bash: "Bash",
+    "business acumen": "business acumen",
+    "business analysis": "business analysis",
     "ci/cd": "CI/CD",
     confluence: "Confluence",
     crewai: "CrewAI",
+    "data warehouse": "data warehousing",
+    datasets: "datasets",
     docker: "Docker",
     fastapi: "FastAPI",
     git: "Git",
     gradle: "Gradle",
     guardrails: "guardrails",
+    "growth analytics": "growth analytics",
     intellij: "IntelliJ",
     java: "Java",
     javascript: "JavaScript",
@@ -1576,6 +1632,7 @@ function formatSkillLabel(skill) {
     react: "React",
     "rest api": "REST APIs",
     spring: "Spring",
+    sql: "SQL",
     sqlite: "SQLite",
     testing: "testing",
     typescript: "TypeScript",

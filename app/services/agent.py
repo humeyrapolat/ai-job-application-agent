@@ -507,6 +507,8 @@ def _score_cap_for_requirement_analysis(
 
     if skill_count == 0:
         caps.append(50)
+    elif _has_only_generic_role_signals(requirement_analysis):
+        caps.append(55)
     elif confidence == "low":
         caps.append(72)
     elif confidence == "medium":
@@ -519,6 +521,14 @@ def _score_cap_for_requirement_analysis(
         caps.append(82)
 
     return min(caps)
+
+
+def _has_only_generic_role_signals(requirement_analysis: JobRequirementAnalysis) -> bool:
+    role_signals = set(requirement_analysis.must_have_skills) | set(
+        requirement_analysis.nice_to_have_skills
+    )
+    generic_signals = {"ai", "automation"}
+    return bool(role_signals) and role_signals <= generic_signals
 
 
 LANGUAGE_LEVEL_ORDER = {

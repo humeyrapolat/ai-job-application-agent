@@ -165,6 +165,49 @@ def test_agent_caps_perfect_score_when_job_skill_evidence_is_limited() -> None:
     assert "capped at 72" in response.explanation
 
 
+def test_agent_caps_single_generic_ai_signal_more_conservatively() -> None:
+    payload = AnalyzeApplicationRequest(
+        candidate_name="Ada Lovelace",
+        job_title="Internal Tools Assistant",
+        company_name="Example GmbH",
+        cv_text="I built an AI project and documented the implementation.",
+        job_description="The role uses AI to support internal work and team processes.",
+    )
+
+    response = JobApplicationAgent().analyze(payload)
+
+    assert response.match_score <= 55
+    assert response.score_breakdown.score_cap == 55
+
+
+def test_agent_penalizes_business_analyst_role_when_data_skills_are_missing() -> None:
+    payload = AnalyzeApplicationRequest(
+        candidate_name="Ada Lovelace",
+        job_title="Business Analyst",
+        company_name="Crewmeister",
+        cv_text=(
+            "I built AI backend projects with Python, FastAPI, Docker, Git, REST APIs, "
+            "LangChain, vector databases, and testing."
+        ),
+        job_description=(
+            "AI-powered analysis: You use AI to identify patterns in large datasets. "
+            "Ad-hoc analyses: You assist business teams with data-related questions. "
+            "Technical understanding: initial experience working with SQL and a data warehouse. "
+            "Business acumen: familiar with MRR, upselling, and churn prevention. "
+            "Your goal is to transform insights into growth projects."
+        ),
+    )
+
+    response = JobApplicationAgent().analyze(payload)
+
+    assert response.match_score < 60
+    assert "ai" in response.matched_skills
+    assert {"analytics", "business acumen", "data warehouse", "datasets", "sql"} <= set(
+        response.missing_skills
+    )
+    assert any("Add project evidence" in item for item in response.recommendations)
+
+
 def test_agent_penalizes_unverified_hard_requirements() -> None:
     payload = AnalyzeApplicationRequest(
         candidate_name="Ada Lovelace",

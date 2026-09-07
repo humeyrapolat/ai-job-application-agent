@@ -48,3 +48,21 @@ def test_extract_skills_detects_java_stack_and_ai_coding_tools() -> None:
         "vscode",
         "wiremock",
     } <= skills
+
+
+def test_extract_skills_detects_business_analytics_requirements() -> None:
+    skills = extract_skills(
+        "Use AI for data analysis on large datasets and unstructured data. "
+        "Initial experience with SQL and a data warehouse is required. "
+        "Business acumen includes MRR, upselling, churn prevention, and growth projects."
+    )
+
+    assert {
+        "ai",
+        "analytics",
+        "business acumen",
+        "data warehouse",
+        "datasets",
+        "growth analytics",
+        "sql",
+    } <= skills

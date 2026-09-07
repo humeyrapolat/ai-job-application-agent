@@ -186,6 +186,10 @@ def _build_growth_focus(missing_skills: list[str]) -> str:
         grouped_focus.append("the Java ecosystem")
     if missing & {"javascript", "typescript", "vue", "react"}:
         grouped_focus.append("frontend technologies")
+    if missing & {"analytics", "business analysis", "data warehouse", "datasets", "sql"}:
+        grouped_focus.append("data analysis")
+    if missing & {"business acumen", "growth analytics"}:
+        grouped_focus.append("business growth metrics")
     if missing & {"aws", "mongodb", "bash", "jira", "confluence", "vscode", "intellij"}:
         grouped_focus.append("cloud and delivery tooling")
     if "ai coding tools" in missing:
@@ -226,17 +230,23 @@ def _format_skill_label(skill: str) -> str:
         "ai": "AI",
         "ai agents": "AI agents",
         "ai coding tools": "AI coding tools",
+        "analytics": "analytics",
         "assertj": "AssertJ",
         "aws": "AWS",
         "azure": "Azure",
         "bash": "Bash",
+        "business acumen": "business acumen",
+        "business analysis": "business analysis",
         "ci/cd": "CI/CD",
         "confluence": "Confluence",
+        "data warehouse": "data warehousing",
+        "datasets": "datasets",
         "docker": "Docker",
         "fastapi": "FastAPI",
         "git": "Git",
         "gradle": "Gradle",
         "graphql": "GraphQL",
+        "growth analytics": "growth analytics",
         "intellij": "IntelliJ",
         "java": "Java",
         "javascript": "JavaScript",
@@ -258,6 +268,7 @@ def _format_skill_label(skill: str) -> str:
         "redis": "Redis",
         "rest api": "REST APIs",
         "spring": "Spring",
+        "sql": "SQL",
         "sqlite": "SQLite",
         "typescript": "TypeScript",
         "vector database": "vector databases",
