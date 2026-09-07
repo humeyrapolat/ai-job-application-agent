@@ -18,7 +18,7 @@ const STATUS_LABELS = {
   fallback: "safety fallback",
   generated: "AI generated",
   not_requested: "not requested",
-  unavailable: "unavailable",
+  unavailable: "backend unavailable",
 };
 const SKILL_ALIASES = {
   ai: ["ai", "ai/ml", "artificial intelligence", "machine learning", "ml", "openai"],
@@ -505,7 +505,7 @@ function buildBrowserDemoResult(payload) {
       missingSkills,
       cvText: payload.cv_text,
     }),
-    ai_recommendation_status: payload.use_ai_recommendations ? "unavailable" : "demo",
+    ai_recommendation_status: "demo",
     cover_letter_draft: buildCoverLetter({
       candidateName: payload.candidate_name,
       jobTitle: payload.job_title,
@@ -544,7 +544,7 @@ function analyzeJobRequirements({ jobTitle, jobDescription, cvSkills }) {
     language_requirements: extractLanguageRequirements(jobText),
     location_requirements: extractLocationRequirements(jobText),
     degree_requirements: extractDegreeRequirements(jobText),
-    seniority: inferSeniority(jobText),
+    seniority: inferSeniority(jobTitle, jobDescription),
   };
 }
 
@@ -999,15 +999,31 @@ function extractDegreeRequirements(text) {
   );
 }
 
-function inferSeniority(text) {
-  const lowered = text.toLowerCase();
-  if (["senior", "lead", "principal", "staff"].some((term) => lowered.includes(term))) {
-    return "senior";
+function inferSeniority(jobTitle, jobDescription = "") {
+  const loweredTitle = jobTitle.toLowerCase();
+  const loweredText = `${jobTitle}\n${jobDescription}`.toLowerCase();
+  const studentTerms = ["working student", "werkstudent", "internship", "intern", "trainee"];
+
+  if (studentTerms.some((term) => loweredTitle.includes(term))) {
+    return "student";
   }
-  if (["junior", "entry level", "graduate", "intern"].some((term) => lowered.includes(term))) {
+  if (["junior", "entry level", "graduate"].some((term) => loweredTitle.includes(term))) {
     return "junior";
   }
-  if (["mid", "professional", "2+ years", "3+ years"].some((term) => lowered.includes(term))) {
+  if (["senior", "lead", "principal", "staff"].some((term) => loweredTitle.includes(term))) {
+    return "senior";
+  }
+
+  if (studentTerms.some((term) => loweredText.includes(term))) {
+    return "student";
+  }
+  if (["junior", "entry level", "graduate"].some((term) => loweredText.includes(term))) {
+    return "junior";
+  }
+  if (["senior", "lead", "principal", "staff"].some((term) => loweredText.includes(term))) {
+    return "senior";
+  }
+  if (["mid", "professional", "2+ years", "3+ years"].some((term) => loweredText.includes(term))) {
     return "mid";
   }
   return "unknown";
@@ -1160,7 +1176,7 @@ function renderResult(result) {
   setText("#scoreValue", result.match_score);
   document.querySelector("#scoreBar").style.width = `${Math.max(0, result.match_score)}%`;
   setText("#seniorityValue", result.seniority_signal);
-  setText("#aiStatus", `AI recommendations: ${formatStatus(result.ai_recommendation_status)}`);
+  setText("#aiStatus", `Recommendations: ${formatStatus(result.ai_recommendation_status)}`);
   setText("#coverLetterStatus", `Cover letter: ${formatStatus(result.cover_letter_status)}`);
   setText("#explanation", result.explanation);
   setText("#coverLetter", result.cover_letter_draft);

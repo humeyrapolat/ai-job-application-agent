@@ -98,7 +98,7 @@ def analyze_job_requirements(
         language_requirements=_extract_language_requirements(job_text),
         location_requirements=_extract_location_requirements(job_text),
         degree_requirements=_extract_degree_requirements(job_text),
-        seniority=_infer_seniority(job_text),
+        seniority=_infer_seniority(job_title, job_description),
     )
 
 
@@ -201,13 +201,25 @@ def _extract_degree_requirements(text: str) -> list[str]:
     return sorted(set(requirements))
 
 
-def _infer_seniority(text: str) -> str:
-    lowered = text.lower()
-    if any(term in lowered for term in ("senior", "lead", "principal", "staff")):
-        return "senior"
-    if any(term in lowered for term in ("junior", "entry level", "graduate", "intern")):
+def _infer_seniority(job_title: str, job_description: str = "") -> str:
+    lowered_title = job_title.lower()
+    lowered_text = f"{job_title}\n{job_description}".lower()
+    student_terms = ("working student", "werkstudent", "internship", "intern", "trainee")
+
+    if any(term in lowered_title for term in student_terms):
+        return "student"
+    if any(term in lowered_title for term in ("junior", "entry level", "graduate")):
         return "junior"
-    if any(term in lowered for term in ("mid", "professional", "2+ years", "3+ years")):
+    if any(term in lowered_title for term in ("senior", "lead", "principal", "staff")):
+        return "senior"
+
+    if any(term in lowered_text for term in student_terms):
+        return "student"
+    if any(term in lowered_text for term in ("junior", "entry level", "graduate")):
+        return "junior"
+    if any(term in lowered_text for term in ("senior", "lead", "principal", "staff")):
+        return "senior"
+    if any(term in lowered_text for term in ("mid", "professional", "2+ years", "3+ years")):
         return "mid"
     return "unknown"
 

@@ -32,3 +32,16 @@ def test_analyze_job_requirements_splits_must_have_and_nice_to_have_skills() -> 
     assert requirements.location_requirements == ["Berlin", "Hybrid"]
     assert "Bachelor's degree" in requirements.degree_requirements
     assert "Computer science or related field" in requirements.degree_requirements
+
+
+def test_working_student_title_overrides_senior_terms_in_description() -> None:
+    requirements = analyze_job_requirements(
+        job_title="Working Student AI & Automation (m/f/d)",
+        job_description=(
+            "The role includes Python, automation, and LLM prototype work. "
+            "You will present findings to senior stakeholders and support internal teams."
+        ),
+        cv_skills={"python", "automation", "llm"},
+    )
+
+    assert requirements.seniority == "student"
