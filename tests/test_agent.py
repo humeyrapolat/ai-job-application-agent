@@ -236,7 +236,8 @@ def test_agent_drafts_more_specific_cover_letter() -> None:
     assert "AI Backend Developer" in response.cover_letter_draft
     assert "FastAPI" in response.cover_letter_draft
     assert "Docker" in response.cover_letter_draft
-    assert "actively strengthening" in response.cover_letter_draft
+    assert "continuing to deepen" in response.cover_letter_draft
+    assert "technical foundation and motivation to learn" in response.cover_letter_draft
     assert response.cover_letter_draft.count("\n\n") >= 4
 
 

@@ -25,3 +25,26 @@ def test_extract_skills_detects_agentic_ai_and_automation_terms() -> None:
     )
 
     assert {"ai agents", "automation", "autogen", "crewai", "guardrails"} <= skills
+
+
+def test_extract_skills_detects_java_stack_and_ai_coding_tools() -> None:
+    skills = extract_skills(
+        "Experience with Java, Spring, Jakarta, JUnit, Mockito, Gradle, IntelliJ, "
+        "VS Code, Claude Code, Copilot, WireMock, AssertJ, Bash, Jira, and Confluence."
+    )
+
+    assert {
+        "ai coding tools",
+        "assertj",
+        "bash",
+        "confluence",
+        "gradle",
+        "intellij",
+        "java",
+        "jira",
+        "junit",
+        "mockito",
+        "spring",
+        "vscode",
+        "wiremock",
+    } <= skills

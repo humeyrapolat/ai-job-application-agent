@@ -75,11 +75,30 @@ const SKILL_ALIASES = {
     "automated workflows",
     "workflow automation",
   ],
+  "ai coding tools": [
+    "ai coding tool",
+    "ai coding tools",
+    "claude code",
+    "copilot",
+    "github copilot",
+    "opencode",
+    "open code",
+  ],
   autogen: ["autogen", "auto gen"],
+  assertj: ["assertj", "assert j"],
+  bash: ["bash", "shell script", "shell scripting"],
+  confluence: ["confluence"],
   crewai: ["crewai", "crew ai"],
+  gradle: ["gradle"],
   guardrails: ["guardrails", "nemo guardrails", "nemoguardrails"],
+  intellij: ["intellij", "intellij idea"],
+  java: ["java"],
+  jira: ["jira"],
+  junit: ["junit", "j unit"],
+  mockito: ["mockito"],
   openclaw: ["openclaw", "open claw"],
   rag: ["rag", "retrieval augmented generation", "vector search"],
+  spring: ["spring", "spring boot", "jakarta", "jakarta ee"],
   "vector database": ["vector database", "vector databases", "vector db", "embeddings"],
   langchain: ["langchain"],
   langgraph: ["langgraph"],
@@ -91,6 +110,9 @@ const SKILL_ALIASES = {
   javascript: ["javascript", "js"],
   typescript: ["typescript", "ts"],
   react: ["react", "reactjs"],
+  vscode: ["vs code", "vscode", "visual studio code"],
+  vue: ["vue", "vue.js", "vuejs"],
+  wiremock: ["wiremock", "wire mock"],
 };
 const MUST_HAVE_TERMS = [
   "required",
@@ -514,6 +536,7 @@ function buildBrowserDemoResult(payload) {
       matchedSkills,
       missingSkills,
       extraCandidateSkills,
+      requirementAnalysis,
     }),
     cover_letter_status: "deterministic",
     workflow_actions: buildWorkflowActions({ matchScore, missingSkills }),
@@ -551,14 +574,21 @@ function analyzeJobRequirements({ jobTitle, jobDescription, cvSkills }) {
 function classifyJobSkills(jobDescription, jobSkills) {
   const mustHaveSkills = new Set();
   const niceToHaveSkills = new Set();
+  let currentSection = "must";
 
   for (const fragment of splitRequirementFragments(jobDescription)) {
+    if (containsAny(fragment, NICE_TO_HAVE_TERMS)) {
+      currentSection = "nice";
+    } else if (containsAny(fragment, MUST_HAVE_TERMS)) {
+      currentSection = "must";
+    }
+
     const fragmentSkills = intersection(extractSkills(fragment), jobSkills);
     if (!fragmentSkills.size) {
       continue;
     }
 
-    if (containsAny(fragment, NICE_TO_HAVE_TERMS)) {
+    if (currentSection === "nice") {
       addAll(niceToHaveSkills, fragmentSkills);
     } else {
       addAll(mustHaveSkills, fragmentSkills);
@@ -869,29 +899,48 @@ function buildCoverLetter({
   matchedSkills,
   missingSkills,
   extraCandidateSkills,
+  requirementAnalysis,
 }) {
-  const strengths = formatHumanSkillList(matchedSkills.slice(0, 5)) || "AI and backend projects";
+  const strengths = formatHumanSkillList(matchedSkills.slice(0, 5)) || "software development";
+  const roleFocus = buildRoleFocus({ jobTitle, matchedSkills, requirementAnalysis });
   const adjacentStrengths = formatHumanSkillList(extraCandidateSkills.slice(0, 4));
-  const readinessSentence = buildReadinessSentence({ matchScore, missingSkills });
+  const readinessSentence = buildReadinessSentence({
+    matchScore,
+    missingSkills,
+    requirementAnalysis,
+  });
   const adjacentSentence = adjacentStrengths
     ? ` I can also bring adjacent experience in ${adjacentStrengths}, where relevant.`
     : "";
 
   return (
     `Dear ${companyName} team,\n\n` +
-    `I am applying for the ${jobTitle} role because it aligns with my hands-on interest in ${strengths}.\n\n` +
-    `My recent work includes practical project experience with ${strengths}. This background would help me contribute to implementation, clear API workflows, and reliable delivery for ${companyName}.${adjacentSentence}\n\n` +
+    `I am excited to apply for the ${jobTitle} role. The position's focus on ${roleFocus} fits the kind of practical software and AI work I want to keep building.\n\n` +
+    `My recent projects gave me hands-on practice with ${strengths}. This background would help me contribute to implementation, testing, documentation, and clear delivery in the ${companyName} team.${adjacentSentence}\n\n` +
     `${readinessSentence}\n\n` +
-    `Thank you for considering my application. I would be glad to discuss how my AI automation and backend experience can support the ${companyName} team.\n\n` +
+    `Thank you for considering my application. I would be glad to discuss how my technical foundation and motivation to learn can support the ${companyName} team.\n\n` +
     `Best regards,\n${candidateName}`
   );
 }
 
-function buildReadinessSentence({ matchScore, missingSkills }) {
+function buildRoleFocus({ jobTitle, matchedSkills, requirementAnalysis }) {
+  const roleTerms = uniquePreserveOrder([
+    ...requirementAnalysis.matched_must_have_skills.slice(0, 3),
+    ...requirementAnalysis.matched_nice_to_have_skills.slice(0, 2),
+    ...matchedSkills.slice(0, 2),
+  ]);
+
+  return formatHumanSkillList(roleTerms) || jobTitle.toLowerCase();
+}
+
+function buildReadinessSentence({ matchScore, missingSkills, requirementAnalysis }) {
   if (missingSkills.length) {
-    return `For the areas around ${formatHumanSkillList(
-      missingSkills.slice(0, 3),
-    )}, I would connect focused learning with concrete project evidence before presenting them as core strengths.`;
+    const growthFocus = buildGrowthFocus(
+      requirementAnalysis.missing_must_have_skills.length
+        ? requirementAnalysis.missing_must_have_skills
+        : missingSkills,
+    );
+    return `I am also continuing to deepen role-specific areas such as ${growthFocus} through focused practice, while keeping my application grounded in skills I can support with project evidence.`;
   }
 
   if (matchScore >= 80) {
@@ -899,6 +948,36 @@ function buildReadinessSentence({ matchScore, missingSkills }) {
   }
 
   return "The current overlap gives me a practical starting point, and I would strengthen the role-specific evidence before submitting the final application.";
+}
+
+function buildGrowthFocus(missingSkills) {
+  const missing = new Set(missingSkills);
+  const groupedFocus = [];
+
+  if (
+    ["java", "spring", "junit", "mockito", "gradle", "assertj", "wiremock"].some((skill) =>
+      missing.has(skill),
+    )
+  ) {
+    groupedFocus.push("the Java ecosystem");
+  }
+  if (["javascript", "typescript", "vue", "react"].some((skill) => missing.has(skill))) {
+    groupedFocus.push("frontend technologies");
+  }
+  if (
+    ["aws", "mongodb", "bash", "jira", "confluence", "vscode", "intellij"].some((skill) =>
+      missing.has(skill),
+    )
+  ) {
+    groupedFocus.push("cloud and delivery tooling");
+  }
+  if (missing.has("ai coding tools")) {
+    groupedFocus.push("AI coding tools");
+  }
+
+  return groupedFocus.length
+    ? formatHumanList(groupedFocus.slice(0, 3))
+    : formatHumanSkillList(missingSkills.slice(0, 3));
 }
 
 function buildWorkflowActions({ matchScore, missingSkills }) {
@@ -1002,7 +1081,17 @@ function extractDegreeRequirements(text) {
 function inferSeniority(jobTitle, jobDescription = "") {
   const loweredTitle = jobTitle.toLowerCase();
   const loweredText = `${jobTitle}\n${jobDescription}`.toLowerCase();
-  const studentTerms = ["working student", "werkstudent", "internship", "intern", "trainee"];
+  const studentTerms = [
+    "full-time student",
+    "student assistant",
+    "working student",
+    "werkstudent",
+    "vollzeitstudent",
+    "eingeschriebene",
+    "internship",
+    "intern",
+    "trainee",
+  ];
 
   if (studentTerms.some((term) => loweredTitle.includes(term))) {
     return "student";
@@ -1415,6 +1504,18 @@ function uniqueSorted(items) {
   return sortItems(new Set(items));
 }
 
+function uniquePreserveOrder(items) {
+  const seen = new Set();
+  const uniqueItems = [];
+  for (const item of items) {
+    if (!seen.has(item)) {
+      seen.add(item);
+      uniqueItems.push(item);
+    }
+  }
+  return uniqueItems;
+}
+
 function sortItems(items) {
   return [...items].sort((first, second) => first.localeCompare(second));
 }
@@ -1440,20 +1541,31 @@ function formatSkillLabel(skill) {
   const displayNames = {
     ai: "AI",
     "ai agents": "AI agents",
+    "ai coding tools": "AI coding tools",
+    assertj: "AssertJ",
     autogen: "AutoGen",
     automation: "automation",
     aws: "AWS",
     azure: "Azure",
+    bash: "Bash",
     "ci/cd": "CI/CD",
+    confluence: "Confluence",
     crewai: "CrewAI",
     docker: "Docker",
     fastapi: "FastAPI",
     git: "Git",
+    gradle: "Gradle",
     guardrails: "guardrails",
+    intellij: "IntelliJ",
+    java: "Java",
     javascript: "JavaScript",
+    jira: "Jira",
+    junit: "JUnit",
     langchain: "LangChain",
     langgraph: "LangGraph",
     llm: "LLM",
+    mockito: "Mockito",
+    mongodb: "MongoDB",
     neo4j: "Neo4j",
     nlp: "NLP",
     "openai api": "OpenAI API",
@@ -1463,10 +1575,14 @@ function formatSkillLabel(skill) {
     rag: "RAG",
     react: "React",
     "rest api": "REST APIs",
+    spring: "Spring",
     sqlite: "SQLite",
     testing: "testing",
     typescript: "TypeScript",
     "vector database": "vector databases",
+    vscode: "VS Code",
+    vue: "Vue.js",
+    wiremock: "WireMock",
   };
   return displayNames[skill] || skill;
 }

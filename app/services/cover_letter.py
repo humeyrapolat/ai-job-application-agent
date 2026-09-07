@@ -45,6 +45,7 @@ class CoverLetterEngine:
             matched_skills=matched_skills,
             missing_skills=missing_skills,
             extra_candidate_skills=extra_candidate_skills,
+            requirement_analysis=requirement_analysis,
         )
 
         if not use_ai:
@@ -102,13 +103,15 @@ def build_deterministic_cover_letter(
     matched_skills: list[str],
     missing_skills: list[str],
     extra_candidate_skills: list[str],
+    requirement_analysis: JobRequirementAnalysis,
 ) -> str:
-    strengths = _format_human_skill_list(matched_skills[:5]) or "backend development"
-    role_focus = _build_role_focus(job_title, matched_skills, missing_skills)
+    strengths = _format_human_skill_list(matched_skills[:5]) or "software development"
+    role_focus = _build_role_focus(job_title, matched_skills, requirement_analysis)
     adjacent_strengths = _format_human_skill_list(extra_candidate_skills[:4])
     readiness_sentence = _build_readiness_sentence(
         match_score=match_score,
         missing_skills=missing_skills,
+        requirement_analysis=requirement_analysis,
     )
     adjacent_sentence = (
         f" I can also bring adjacent experience in {adjacent_strengths}, where relevant."
@@ -118,14 +121,15 @@ def build_deterministic_cover_letter(
 
     return (
         f"Dear {company_name} team,\n\n"
-        f"I am applying for the {job_title} role because it aligns with my interest in "
-        f"{role_focus}.\n\n"
-        f"My recent work includes hands-on project experience with {strengths}. This "
-        "background would help me contribute to practical implementation, clear API "
-        f"workflows, and reliable delivery for {company_name}.{adjacent_sentence}\n\n"
+        f"I am excited to apply for the {job_title} role. The position's focus on "
+        f"{role_focus} fits the kind of practical software and AI work I want to keep "
+        "building.\n\n"
+        f"My recent projects gave me hands-on practice with {strengths}. This background "
+        "would help me contribute to implementation, testing, documentation, and clear "
+        f"delivery in the {company_name} team.{adjacent_sentence}\n\n"
         f"{readiness_sentence}\n\n"
-        f"Thank you for considering my application. I would be glad to discuss how my "
-        f"backend and AI automation experience can support the {company_name} team.\n\n"
+        "Thank you for considering my application. I would be glad to discuss how my "
+        f"technical foundation and motivation to learn can support the {company_name} team.\n\n"
         f"Best regards,\n{candidate_name}"
     )
 
@@ -133,22 +137,33 @@ def build_deterministic_cover_letter(
 def _build_role_focus(
     job_title: str,
     matched_skills: list[str],
-    missing_skills: list[str],
+    requirement_analysis: JobRequirementAnalysis,
 ) -> str:
-    role_terms = matched_skills[:3] + missing_skills[:2]
+    role_terms = (
+        requirement_analysis.matched_must_have_skills[:3]
+        + requirement_analysis.matched_nice_to_have_skills[:2]
+        + matched_skills[:2]
+    )
     if role_terms:
-        return _format_human_skill_list(role_terms)
+        return _format_human_skill_list(_unique_preserve_order(role_terms))
 
     return job_title.lower()
 
 
-def _build_readiness_sentence(*, match_score: int, missing_skills: list[str]) -> str:
+def _build_readiness_sentence(
+    *,
+    match_score: int,
+    missing_skills: list[str],
+    requirement_analysis: JobRequirementAnalysis,
+) -> str:
     if missing_skills:
-        missing_skill_list = _format_human_skill_list(missing_skills[:3])
+        growth_focus = _build_growth_focus(
+            requirement_analysis.missing_must_have_skills or missing_skills
+        )
         return (
-            f"Where the role asks for {missing_skill_list}, I am actively strengthening those "
-            "areas through focused project work and would connect that learning to the role's "
-            "delivery needs."
+            f"I am also continuing to deepen role-specific areas such as {growth_focus} "
+            "through focused practice, while keeping my application grounded in skills I "
+            "can support with project evidence."
         )
 
     if match_score >= 80:
@@ -161,6 +176,25 @@ def _build_readiness_sentence(*, match_score: int, missing_skills: list[str]) ->
         "Although the match is not perfect, the overlap gives me a clear starting point to "
         "contribute while continuing to deepen the role-specific skills."
     )
+
+
+def _build_growth_focus(missing_skills: list[str]) -> str:
+    missing = set(missing_skills)
+    grouped_focus: list[str] = []
+
+    if missing & {"java", "spring", "junit", "mockito", "gradle", "assertj", "wiremock"}:
+        grouped_focus.append("the Java ecosystem")
+    if missing & {"javascript", "typescript", "vue", "react"}:
+        grouped_focus.append("frontend technologies")
+    if missing & {"aws", "mongodb", "bash", "jira", "confluence", "vscode", "intellij"}:
+        grouped_focus.append("cloud and delivery tooling")
+    if "ai coding tools" in missing:
+        grouped_focus.append("AI coding tools")
+
+    if grouped_focus:
+        return _format_human_list(grouped_focus[:3])
+
+    return _format_human_skill_list(missing_skills[:3])
 
 
 def _format_human_list(items: list[str]) -> str:
@@ -177,20 +211,41 @@ def _format_human_skill_list(skills: list[str]) -> str:
     return _format_human_list([_format_skill_label(skill) for skill in skills])
 
 
+def _unique_preserve_order(items: list[str]) -> list[str]:
+    seen: set[str] = set()
+    unique_items: list[str] = []
+    for item in items:
+        if item not in seen:
+            seen.add(item)
+            unique_items.append(item)
+    return unique_items
+
+
 def _format_skill_label(skill: str) -> str:
     display_names = {
         "ai": "AI",
+        "ai agents": "AI agents",
+        "ai coding tools": "AI coding tools",
+        "assertj": "AssertJ",
         "aws": "AWS",
         "azure": "Azure",
+        "bash": "Bash",
         "ci/cd": "CI/CD",
+        "confluence": "Confluence",
         "docker": "Docker",
         "fastapi": "FastAPI",
         "git": "Git",
+        "gradle": "Gradle",
         "graphql": "GraphQL",
+        "intellij": "IntelliJ",
+        "java": "Java",
         "javascript": "JavaScript",
+        "jira": "Jira",
+        "junit": "JUnit",
         "langchain": "LangChain",
         "langgraph": "LangGraph",
         "llm": "LLM",
+        "mockito": "Mockito",
         "mongodb": "MongoDB",
         "mysql": "MySQL",
         "neo4j": "Neo4j",
@@ -202,9 +257,13 @@ def _format_skill_label(skill: str) -> str:
         "react": "React",
         "redis": "Redis",
         "rest api": "REST APIs",
+        "spring": "Spring",
         "sqlite": "SQLite",
         "typescript": "TypeScript",
         "vector database": "vector databases",
+        "vscode": "VS Code",
+        "vue": "Vue.js",
+        "wiremock": "WireMock",
     }
     return display_names.get(skill, skill)
 

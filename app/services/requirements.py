@@ -108,13 +108,19 @@ def _classify_job_skills(
 ) -> tuple[set[str], set[str]]:
     must_have_skills: set[str] = set()
     nice_to_have_skills: set[str] = set()
+    current_section = "must"
 
     for fragment in _split_requirement_fragments(job_description):
+        if _contains_any(fragment, NICE_TO_HAVE_TERMS):
+            current_section = "nice"
+        elif _contains_any(fragment, MUST_HAVE_TERMS):
+            current_section = "must"
+
         fragment_skills = extract_skills(fragment) & job_skills
         if not fragment_skills:
             continue
 
-        if _contains_any(fragment, NICE_TO_HAVE_TERMS):
+        if current_section == "nice":
             nice_to_have_skills.update(fragment_skills)
         else:
             must_have_skills.update(fragment_skills)
@@ -204,7 +210,17 @@ def _extract_degree_requirements(text: str) -> list[str]:
 def _infer_seniority(job_title: str, job_description: str = "") -> str:
     lowered_title = job_title.lower()
     lowered_text = f"{job_title}\n{job_description}".lower()
-    student_terms = ("working student", "werkstudent", "internship", "intern", "trainee")
+    student_terms = (
+        "full-time student",
+        "student assistant",
+        "working student",
+        "werkstudent",
+        "vollzeitstudent",
+        "eingeschriebene",
+        "internship",
+        "intern",
+        "trainee",
+    )
 
     if any(term in lowered_title for term in student_terms):
         return "student"
