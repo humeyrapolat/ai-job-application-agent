@@ -20,6 +20,14 @@ const STATUS_LABELS = {
   not_requested: "not requested",
   unavailable: "backend unavailable",
 };
+const STATUS_TONES = {
+  demo: "neutral",
+  deterministic: "neutral",
+  fallback: "warning",
+  generated: "good",
+  not_requested: "neutral",
+  unavailable: "warning",
+};
 const SKILL_ALIASES = {
   ai: ["ai", "ai/ml", "artificial intelligence", "machine learning", "ml", "openai"],
   analytics: [
@@ -1307,16 +1315,39 @@ function cleanApiBaseUrl() {
   return apiBaseUrlInput.value.trim().replace(/\/+$/, "") || DEFAULT_API_BASE_URL;
 }
 
+const GAUGE_RADIUS = 52;
+const GAUGE_CIRCUMFERENCE = 2 * Math.PI * GAUGE_RADIUS;
+
 function renderResult(result) {
   emptyState.classList.add("hidden");
   resultContent.classList.remove("hidden");
+  // Two rAFs: one to let the browser commit the pre-transition state (opacity
+  // 0), one to flip the class so the CSS transition actually animates
+  // instead of jumping straight to its end state.
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => resultContent.classList.add("is-visible"));
+  });
 
   setText("#resultId", result.application_id === "Demo" ? "Demo result" : `Analysis #${result.application_id}`);
+
+  const tier = scoreTier(result.match_score);
   setText("#scoreValue", result.match_score);
-  document.querySelector("#scoreBar").style.width = `${Math.max(0, result.match_score)}%`;
-  setText("#seniorityValue", result.seniority_signal);
-  setText("#aiStatus", `Recommendations: ${formatStatus(result.ai_recommendation_status)}`);
-  setText("#coverLetterStatus", `Cover letter: ${formatStatus(result.cover_letter_status)}`);
+  document.querySelector("#scoreGauge").dataset.tier = tier;
+  const offset = GAUGE_CIRCUMFERENCE * (1 - Math.min(100, Math.max(0, result.match_score)) / 100);
+  document.querySelector("#gaugeFill").style.strokeDasharray = `${GAUGE_CIRCUMFERENCE}`;
+  document.querySelector("#gaugeFill").style.strokeDashoffset = `${offset}`;
+
+  const requirements = result.requirement_analysis;
+  setText(
+    "#scoreSummary",
+    `${requirements.matched_must_have_skills.length}/${requirements.must_have_skills.length} required skills matched, ` +
+      `${requirements.matched_nice_to_have_skills.length}/${requirements.nice_to_have_skills.length} preferred.`,
+  );
+  setText("#seniorityValue", `Seniority: ${result.seniority_signal}`);
+  setBadgeTone("#confidenceValue", `Confidence: ${result.score_breakdown.confidence}`, confidenceTier(result.score_breakdown.confidence));
+
+  setStatusLine("#aiStatus", `Recommendations: ${formatStatus(result.ai_recommendation_status)}`, STATUS_TONES[result.ai_recommendation_status]);
+  setStatusLine("#coverLetterStatus", `Cover letter: ${formatStatus(result.cover_letter_status)}`, STATUS_TONES[result.cover_letter_status]);
   setText("#explanation", result.explanation);
   setText("#coverLetter", result.cover_letter_draft);
 
@@ -1328,6 +1359,30 @@ function renderResult(result) {
   renderPlainList("#recommendations", result.recommendations);
   renderCvRecommendations(result.cv_recommendations);
   renderWorkflowActions(result.workflow_actions);
+}
+
+function scoreTier(score) {
+  if (score >= 80) return "good";
+  if (score >= 65) return "warning";
+  return "serious";
+}
+
+function confidenceTier(confidence) {
+  if (confidence === "high") return "good";
+  if (confidence === "medium") return "warning";
+  return "serious";
+}
+
+function setBadgeTone(selector, text, tier) {
+  const element = document.querySelector(selector);
+  element.textContent = text;
+  element.dataset.tier = tier;
+}
+
+function setStatusLine(selector, text, tone) {
+  const element = document.querySelector(selector);
+  element.textContent = text;
+  element.className = `status-line tone-${tone || "neutral"}`;
 }
 
 function renderRequirementAnalysis(requirements) {
@@ -1368,21 +1423,37 @@ function renderScoreBreakdown(breakdown) {
   const container = document.querySelector("#scoreBreakdown");
   replaceChildren(container);
 
-  const items = [
-    ["Hard reqs", `${breakdown.hard_requirement_score}/20`],
-    ["Required skills", `${breakdown.technical_score}/45`],
-    ["Preferred", `${breakdown.preferred_score}/15`],
-    ["Evidence", `${breakdown.evidence_score}/15`],
-    ["Adjacent", `${breakdown.adjacent_skill_score}/5`],
-    ["Cap", breakdown.score_cap],
-    ["Confidence", breakdown.confidence],
+  const ratioItems = [
+    ["Hard reqs", breakdown.hard_requirement_score, 20],
+    ["Required skills", breakdown.technical_score, 45],
+    ["Preferred", breakdown.preferred_score, 15],
+    ["Evidence", breakdown.evidence_score, 15],
+    ["Adjacent", breakdown.adjacent_skill_score, 5],
   ];
 
-  for (const [label, value] of items) {
+  for (const [label, value, max] of ratioItems) {
+    const ratio = max > 0 ? value / max : 0;
     const card = createElement("article", "score-breakdown-item");
-    card.append(createElement("span", "", label), createElement("strong", "", value));
+    card.dataset.tone = ratio >= 0.7 ? "good" : ratio >= 0.4 ? "warning" : "serious";
+    card.append(createElement("span", "", label), createElement("strong", "", `${value}/${max}`));
+
+    const miniBar = createElement("div", "mini-bar");
+    const miniBarFill = createElement("span");
+    miniBarFill.style.width = `${Math.round(ratio * 100)}%`;
+    miniBar.append(miniBarFill);
+    card.append(miniBar);
+
     container.append(card);
   }
+
+  const capCard = createElement("article", "score-breakdown-item");
+  capCard.append(createElement("span", "", "Cap"), createElement("strong", "", breakdown.score_cap));
+  container.append(capCard);
+
+  const confidenceCard = createElement("article", "score-breakdown-item");
+  confidenceCard.dataset.tone = confidenceTier(breakdown.confidence);
+  confidenceCard.append(createElement("span", "", "Confidence"), createElement("strong", "", breakdown.confidence));
+  container.append(confidenceCard);
 }
 
 function renderChips(selector, items, variant) {
