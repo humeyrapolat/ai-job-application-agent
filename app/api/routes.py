@@ -57,7 +57,7 @@ def analyze_application(payload: AnalyzeApplicationRequest) -> StoredAnalyzeAppl
 
     return StoredAnalyzeApplicationResponse(
         application_id=application_id,
-        **analysis.dict(),
+        **analysis.model_dump(),
     )
 
 

@@ -7,7 +7,7 @@ from app.domain.schemas import AnalyzeApplicationResponse
 
 class ApplicationRepository:
     def save_analysis(self, analysis: AnalyzeApplicationResponse) -> int:
-        response_json = analysis.json()
+        response_json = analysis.model_dump_json()
 
         with get_connection() as connection:
             cursor = connection.execute(
