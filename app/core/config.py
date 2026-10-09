@@ -24,6 +24,15 @@ def _parse_csv_env(value: str | None, default: tuple[str, ...]) -> tuple[str, ..
     return items or default
 
 
+def get_api_key() -> str | None:
+    """Shared-secret key that protects endpoints exposing stored candidate data.
+
+    Read lazily (per call) rather than frozen on `settings`, so it can be
+    rotated without a restart and so tests can set/unset it per-test.
+    """
+    return os.getenv("API_KEY")
+
+
 settings = Settings(
     app_name=os.getenv("APP_NAME", "AI Job Application Agent"),
     app_env=os.getenv("APP_ENV", "local"),

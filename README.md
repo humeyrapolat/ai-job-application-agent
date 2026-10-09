@@ -115,8 +115,15 @@ GROQ_MODEL="openai/gpt-oss-20b"
 | GET | `/skills` | List known skills |
 | POST | `/documents/extract-text` | Extract text from a CV PDF |
 | POST | `/applications/analyze` | Analyze a CV against a job description |
-| GET | `/applications` | List saved analyses |
-| GET | `/applications/{application_id}` | Retrieve one saved analysis |
+| GET | `/applications` 🔒 | List saved analyses |
+| GET | `/applications/{application_id}` 🔒 | Retrieve one saved analysis |
+
+🔒 Requires `Authorization: Bearer <API_KEY>` — these two endpoints return
+previously stored candidate data (name, job/company, full analysis), so
+they're not open to anyone who finds the deployed URL. Set `API_KEY` in
+`.env` (see `.env.example`); requests without a valid key get `401`, and
+if the server has no `API_KEY` configured at all it responds `503` rather
+than silently allowing unauthenticated access.
 
 ## Quality Checks
 

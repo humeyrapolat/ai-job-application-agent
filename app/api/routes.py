@@ -1,8 +1,9 @@
 from typing import Any
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 
 from app.core.database import initialize_database
+from app.core.security import require_api_key
 from app.domain.schemas import (
     AnalyzeApplicationRequest,
     ApplicationSummary,
@@ -61,12 +62,16 @@ def analyze_application(payload: AnalyzeApplicationRequest) -> StoredAnalyzeAppl
     )
 
 
-@router.get("/applications", response_model=list[ApplicationSummary])
+@router.get(
+    "/applications",
+    response_model=list[ApplicationSummary],
+    dependencies=[Depends(require_api_key)],
+)
 def list_applications() -> list[ApplicationSummary]:
     return [ApplicationSummary(**item) for item in repository.list_analyses()]
 
 
-@router.get("/applications/{application_id}")
+@router.get("/applications/{application_id}", dependencies=[Depends(require_api_key)])
 def get_application(application_id: int) -> dict[str, Any]:
     application = repository.get_analysis(application_id)
     if application is None:

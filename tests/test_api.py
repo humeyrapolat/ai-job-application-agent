@@ -6,11 +6,15 @@ from fastapi.testclient import TestClient
 
 from app.core.database import initialize_database
 
+TEST_API_KEY = "test-api-key-not-a-secret"
+AUTH_HEADERS = {"Authorization": f"Bearer {TEST_API_KEY}"}
+
 
 @pytest.fixture
 def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> TestClient:
     test_database_path = tmp_path / "test_applications.db"
     monkeypatch.setenv("DATABASE_PATH", str(test_database_path))
+    monkeypatch.setenv("API_KEY", TEST_API_KEY)
     initialize_database()
 
     from app.main import app
@@ -101,12 +105,24 @@ def test_list_applications_endpoint(client: TestClient) -> None:
     )
     assert create_response.status_code == 200
 
-    response = client.get("/applications")
+    response = client.get("/applications", headers=AUTH_HEADERS)
 
     assert response.status_code == 200
     body = response.json()
     assert len(body) >= 1
     assert any(item["candidate_name"] == "Grace Hopper" for item in body)
+
+
+def test_list_applications_requires_api_key(client: TestClient) -> None:
+    response = client.get("/applications")
+
+    assert response.status_code == 401
+
+
+def test_list_applications_rejects_wrong_api_key(client: TestClient) -> None:
+    response = client.get("/applications", headers={"Authorization": "Bearer wrong-key"})
+
+    assert response.status_code == 401
 
 
 def test_get_application_endpoint(client: TestClient) -> None:
@@ -122,7 +138,7 @@ def test_get_application_endpoint(client: TestClient) -> None:
     )
     application_id = create_response.json()["application_id"]
 
-    response = client.get(f"/applications/{application_id}")
+    response = client.get(f"/applications/{application_id}", headers=AUTH_HEADERS)
 
     assert response.status_code == 200
     body = response.json()
@@ -130,8 +146,24 @@ def test_get_application_endpoint(client: TestClient) -> None:
     assert body["candidate_name"] == "Alan Turing"
 
 
+def test_get_application_requires_api_key(client: TestClient) -> None:
+    response = client.get("/applications/1")
+
+    assert response.status_code == 401
+
+
 def test_get_application_returns_404_for_unknown_id(client: TestClient) -> None:
-    response = client.get("/applications/999999")
+    response = client.get("/applications/999999", headers=AUTH_HEADERS)
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Application analysis not found"
+
+
+def test_get_application_returns_503_when_api_key_not_configured(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.delenv("API_KEY", raising=False)
+
+    response = client.get("/applications/1", headers=AUTH_HEADERS)
+
+    assert response.status_code == 503
